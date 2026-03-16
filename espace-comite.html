@@ -716,9 +716,14 @@ return['<div style="background:linear-gradient(135deg,#0a1628,#0d1e3a);border:1p
 async function ajouterCompteComite(){
   var nom=prompt('Nom :');
   if(!nom||!nom.trim())return;
-  var id=prompt('Identifiant (sans espaces) :');
+  var id=prompt('Identifiant (sans espaces ni points) - Ex: herve-lobe ou hervelobe :');
   if(!id||id.indexOf(' ')>=0){notifier('&#x26A0; Identifiant invalide','danger');return;}
-  var idClean=id.trim().toLowerCase();
+  var idClean=id.trim().toLowerCase()
+    .replace(/\./g,'-')
+    .replace(/#/g,'-')
+    .replace(/\$/g,'-')
+    .replace(/\[/g,'-')
+    .replace(/\]/g,'-');
   var mdp=prompt('Mot de passe (min 4 car.) :');
   if(!mdp||mdp.length<4){notifier('&#x26A0; MDP trop court','danger');return;}
   var h=await sha256(mdp);
