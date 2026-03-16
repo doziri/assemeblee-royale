@@ -61,7 +61,7 @@ function afficherQRFallback(el, text, size, cacheKey) {
   // Google Charts si en ligne
   if (navigator.onLine) {
     var img = document.createElement('img');
-    img.src = 'https://chart.googleapis.com/chart?chs='+size+'x'+size+'&cht=qr&chl='+encodeURIComponent(text)+'&choe=UTF-8';
+    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(text)+'&bgcolor=ffffff&color=0a1628&format=png';
     img.style.cssText = 'width:'+size+'px;height:'+size+'px;border-radius:6px;';
     el.appendChild(img);
     return;
