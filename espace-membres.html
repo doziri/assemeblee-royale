@@ -62,7 +62,7 @@ function afficherQRFallback(el, text, size, cacheKey) {
   if (navigator.onLine) {
     var img = document.createElement('img');
     img.src = 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(text)+'&bgcolor=ffffff&color=0a1628&format=png';
-    img.style.cssText = 'width:'+size+'px;height:'+size+'px;border-radius:6px;';
+    img.style.cssText = 'width:100%;height:100%;display:block;border-radius:4px;';
     el.appendChild(img);
     return;
   }
@@ -847,14 +847,14 @@ function vueMaCarte() {
     '<div style="background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:20px;overflow:hidden;margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6)">',
       '<div style="height:6px;background:'+strip[s]+'"></div>',
       '<div style="padding:20px">',
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">',
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:10px">',
           '<div>',
             LOGO_DATA?'<img src="'+LOGO_DATA+'" style="height:36px;border-radius:8px;object-fit:contain;margin-bottom:8px;display:block"/>':'<div style="font-size:24px;margin-bottom:8px">⛪</div>',
             '<div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px">'+CFG.nom_eglise+'</div>',
             '<div style="font-weight:900;font-size:18px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">'+mFrais.nom+'</div>',
             '<div style="color:var(--bleu);font-size:13px;font-family:monospace;font-weight:700;margin-top:3px">'+mFrais.id+'</div>',
           '</div>',
-          '<div class="qr-wrap" id="qr-macarte" style="width:100px;height:100px;display:flex;align-items:center;justify-content:center;flex-shrink:0">',
+          '<div id="qr-macarte" style="width:94px;height:94px;flex-shrink:0;background:#fff;padding:3px;border-radius:8px;overflow:hidden;">',
             '<div style="color:var(--grisC);font-size:10px">QR...</div>',
           '</div>',
         '</div>',
