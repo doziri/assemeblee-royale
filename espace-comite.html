@@ -223,9 +223,19 @@ async function jsonbinGet() {
       .then(function(snapshot) {
         var data = snapshot.val();
         if (!data) {
-          // Base vide - retourner structure par défaut
           resolve({membres:[], cfg:{}, comptes:{}, montants:[], logo:null});
         } else {
+          // Normaliser : Firebase convertit les tableaux en objets {0:{}, 1:{}}
+          // Il faut les reconvertir en vrais tableaux JS
+          if (data.membres && !Array.isArray(data.membres)) {
+            data.membres = Object.values(data.membres);
+          }
+          if (data.montants && !Array.isArray(data.montants)) {
+            data.montants = Object.values(data.montants);
+          }
+          if (data.comptes && data.comptes.comite && !Array.isArray(data.comptes.comite)) {
+            data.comptes.comite = Object.values(data.comptes.comite);
+          }
           resolve(data);
         }
       })
@@ -235,7 +245,16 @@ async function jsonbinGet() {
 
 async function jsonbinSet(data) {
   return new Promise(function(resolve, reject) {
-    db.ref(DB_REF).set(data)
+    // Normaliser les comptes comité : objet -> tableau avant sauvegarde
+    var dataToSave = JSON.parse(JSON.stringify(data));
+    if (dataToSave.comptes && dataToSave.comptes.comite) {
+      var comite = dataToSave.comptes.comite;
+      // Si c'est un objet (Firebase convertit les tableaux), le reconvertir
+      if (!Array.isArray(comite)) {
+        dataToSave.comptes.comite = Object.values(comite);
+      }
+    }
+    db.ref(DB_REF).set(dataToSave)
       .then(function() { resolve({success: true}); })
       .catch(reject);
   });

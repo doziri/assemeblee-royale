@@ -198,6 +198,16 @@ async function jsonbinGet() {
         if (!data) {
           resolve({membres:[], cfg:{}, comptes:{}, montants:[], logo:null});
         } else {
+          // Normaliser tableaux Firebase
+          if (data.membres && !Array.isArray(data.membres)) {
+            data.membres = Object.values(data.membres);
+          }
+          if (data.montants && !Array.isArray(data.montants)) {
+            data.montants = Object.values(data.montants);
+          }
+          if (data.comptes && data.comptes.comite && !Array.isArray(data.comptes.comite)) {
+            data.comptes.comite = Object.values(data.comptes.comite);
+          }
           resolve(data);
         }
       })
