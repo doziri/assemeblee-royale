@@ -575,8 +575,127 @@ function attacherEvents(){
 
 // SCANNER
 var scannerStream=null,scannerAnimFrame=null,scannerActif=false;
-function vueScanner(){return['<div class="card">','<div style="color:var(--vert);font-weight:800;font-size:15px;margin-bottom:14px">&#x1F4F7; Scanner la carte membre</div>','<div id="scanner-video-container" style="display:none;margin-bottom:14px">','<video id="scanner-video" autoplay playsinline muted style="width:100%;border-radius:12px;display:block"></video>','<div class="scanner-overlay"><div class="scanner-frame"><div class="scan-line" style="position:absolute;width:80%;left:10%"></div></div></div>','</div>','<canvas id="scanner-canvas" style="display:none"></canvas>','<div id="scanner-placeholder" style="background:#111d2a;border-radius:12px;padding:40px;text-align:center;margin-bottom:14px;border:2px dashed var(--border)">','<div style="font-size:44px;margin-bottom:8px">&#x1F4F1;</div>','<div style="color:var(--grisC);font-size:12px">Appuyez pour activer la caméra</div>','</div>','<div id="scanner-result" style="display:none;background:var(--vertD);border:1px solid rgba(78,255,155,0.3);border-radius:12px;padding:14px;margin-bottom:14px;text-align:center"></div>','<div id="camera-err" style="display:none;background:var(--rougeD);border-radius:10px;padding:10px 14px;color:var(--rouge);font-size:12px;margin-bottom:10px;text-align:center"></div>','<div style="display:flex;gap:10px;margin-bottom:14px">','<button id="btn-activer-scanner" class="btn btn-primary" style="flex:1" onclick="activerScanner()">&#x1F4F7; Activer la caméra</button>','<button id="btn-arreter-scanner" class="btn btn-danger" style="flex:1;display:none" onclick="arreterScanner()">&#x23F9; Arrêter</button>','</div>','</div>','<div class="card">','<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">OU SAISIR LE CODE MANUELLEMENT</div>','<div style="display:flex;gap:10px"><input id="code-manuel" type="text" placeholder="Ex: MBR-001" style="text-transform:uppercase"/><button class="btn btn-primary" onclick="validerCodeManuel()">Valider</button></div>','<div id="code-err" style="color:var(--rouge);font-size:12px;margin-top:8px;display:none"></div>','</div>','<div class="card">','<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">SÉLECTION RAPIDE</div>','<input type="text" placeholder="&#x1F50D; Rechercher..." oninput="filtrerScanner(this.value)" style="margin-bottom:10px"/>','<div id="scanner-liste" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">'+renderScannerListe(MEMBRES)+'</div>','</div>'].join('');}
+function vueScanner(){
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  var iosSection = isIOS ? [
+    '<div class="card" style="background:#0a1e14;border-color:rgba(78,255,155,0.3);margin-bottom:14px">',
+      '<div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:10px">&#x1F4F7; Scanner (iPhone/iPad)</div>',
+      '<div style="color:var(--grisC);font-size:12px;margin-bottom:14px">Prenez une photo de la carte QR du membre</div>',
+      '<label style="display:block;background:linear-gradient(135deg,var(--vertD),#164a30);border:1px solid rgba(78,255,155,0.3);color:var(--vert);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-weight:700;font-size:14px;font-family:inherit">',
+        '&#x1F4F7; Prendre une photo du QR code',
+        '<input type="file" accept="image/*" capture="environment" id="ios-qr-input" style="display:none" onchange="traiterPhotoQR(this)"/>',
+      '</label>',
+      '<div id="ios-scan-result" style="display:none;margin-top:10px;padding:12px;border-radius:10px;text-align:center;font-weight:700"></div>',
+    '</div>'
+  ].join('') : '';
+
+  return [
+    iosSection,
+    '<div class="card">',
+      '<div style="color:var(--vert);font-weight:800;font-size:15px;margin-bottom:14px">&#x1F4F7; Scanner en temps reel</div>',
+      '<div id="scanner-video-container" style="display:none;margin-bottom:14px">',
+        '<video id="scanner-video" autoplay playsinline muted webkit-playsinline style="width:100%;border-radius:12px;display:block"></video>',
+        '<div class="scanner-overlay"><div class="scanner-frame"><div class="scan-line" style="position:absolute;width:80%;left:10%"></div></div></div>',
+      '</div>',
+      '<canvas id="scanner-canvas" style="display:none"></canvas>',
+      '<div id="scanner-placeholder" style="background:#111d2a;border-radius:12px;padding:40px;text-align:center;margin-bottom:14px;border:2px dashed var(--border)">',
+        '<div style="font-size:44px;margin-bottom:8px">&#x1F4F1;</div>',
+        '<div style="color:var(--grisC);font-size:12px">Appuyez pour activer la camera</div>',
+      '</div>',
+      '<div id="scanner-result" style="display:none;background:var(--vertD);border:1px solid rgba(78,255,155,0.3);border-radius:12px;padding:14px;margin-bottom:14px;text-align:center"></div>',
+      '<div id="camera-err" style="display:none;background:var(--rougeD);border-radius:10px;padding:10px 14px;color:var(--rouge);font-size:12px;margin-bottom:10px;text-align:center"></div>',
+      '<div style="display:flex;gap:10px;margin-bottom:14px">',
+        '<button id="btn-activer-scanner" class="btn btn-primary" style="flex:1" onclick="activerScanner()">&#x1F4F7; Activer la camera</button>',
+        '<button id="btn-arreter-scanner" class="btn btn-danger" style="flex:1;display:none" onclick="arreterScanner()">&#x23F9; Arreter</button>',
+      '</div>',
+    '</div>',
+    '<div class="card">',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">OU SAISIR LE CODE MANUELLEMENT</div>',
+      '<div style="display:flex;gap:10px"><input id="code-manuel" type="text" placeholder="Ex: MBR-001" style="text-transform:uppercase"/><button class="btn btn-primary" onclick="validerCodeManuel()">Valider</button></div>',
+      '<div id="code-err" style="color:var(--rouge);font-size:12px;margin-top:8px;display:none"></div>',
+    '</div>',
+    '<div class="card">',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">SELECTION RAPIDE</div>',
+      '<input type="text" placeholder="&#x1F50D; Rechercher..." oninput="filtrerScanner(this.value)" style="margin-bottom:10px"/>',
+      '<div id="scanner-liste" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">'+renderScannerListe(MEMBRES)+'</div>',
+    '</div>'
+  ].join('');
+}
+
 function demarrerScannerAuto(){}
+
+function traiterPhotoQR(input) {
+  var file = input.files[0];
+  if(!file) return;
+  var resultEl = document.getElementById('ios-scan-result');
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      // Créer un canvas pour décoder le QR
+      var canvas = document.createElement('canvas');
+      // Réduire la résolution pour jsQR (max 1000px)
+      var maxSize = 1000;
+      var ratio = Math.min(maxSize/img.width, maxSize/img.height, 1);
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      if(typeof jsQR === 'function') {
+        var code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
+        if(code && code.data) {
+          if(resultEl) {
+            resultEl.style.display='block';
+            resultEl.style.background='var(--vertD)';
+            resultEl.style.color='var(--vert)';
+            resultEl.textContent='&#x2705; QR detecte !';
+          }
+          setTimeout(function(){ traiterQRCode(code.data); }, 500);
+          return;
+        }
+      }
+
+      // jsQR n'a pas trouvé - essayer en niveaux de gris
+      if(typeof jsQR === 'function') {
+        // Convertir en niveaux de gris
+        var data = imageData.data;
+        for(var i=0; i<data.length; i+=4) {
+          var gray = Math.round(0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2]);
+          data[i] = data[i+1] = data[i+2] = gray;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        var grayData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var code2 = jsQR(grayData.data, grayData.width, grayData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
+        if(code2 && code2.data) {
+          if(resultEl) { resultEl.style.display='block'; resultEl.style.background='var(--vertD)'; resultEl.style.color='var(--vert)'; resultEl.textContent='QR detecte !';}
+          setTimeout(function(){ traiterQRCode(code2.data); }, 500);
+          return;
+        }
+      }
+
+      // Échec - demander de réessayer
+      if(resultEl) {
+        resultEl.style.display='block';
+        resultEl.style.background='var(--orD)';
+        resultEl.style.color='var(--or)';
+        resultEl.textContent='QR non detecte. Rapprochez-vous et reprenez la photo.';
+      }
+      // Réinitialiser l'input pour permettre une nouvelle photo
+      input.value = '';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 async function activerScanner(){
   var errEl=document.getElementById('camera-err');
   var placeholder=document.getElementById('scanner-placeholder');
