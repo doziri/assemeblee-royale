@@ -22,53 +22,105 @@ var db = firebase.database();
 </script>
 <script>
 
-// ═══ QR CODE HORS LIGNE - Cache localStorage ═══
+// ═══ QR CODE - Génération locale avec fallbacks ═══
+
+// QR Code - Version intégrée locale
+// Utilise l'API canvas pour générer le QR sans réseau
+
 function afficherQRCode(elId, text, size) {
   var el = document.getElementById(elId);
   if (!el) return;
-  el.innerHTML = '';
   size = size || 94;
-  var cacheKey = 'qrcache_' + text.replace(/[^a-z0-9]/gi,'').slice(0,30);
-
-  // Méthode 1: qrcode.js canvas
+  el.innerHTML = '';
+  
+  var cacheKey = 'qrcache_' + btoa(unescape(encodeURIComponent(text))).replace(/[^a-z0-9]/gi,'').slice(0,25);
+  
+  // 1. Essayer QRCode.toCanvas (qrcode.js depuis CDN)
   if (window.QRCode && typeof QRCode.toCanvas === 'function') {
-    var canvas = document.createElement('canvas');
-    el.appendChild(canvas);
-    QRCode.toCanvas(canvas, text, {width:size, color:{dark:'#0a1628',light:'#ffffff'}}, function(err) {
+    var c = document.createElement('canvas');
+    c.width = size; c.height = size;
+    QRCode.toCanvas(c, text, {
+      width: size, margin: 1,
+      color: { dark: '#000000', light: '#ffffff' }
+    }, function(err) {
       if (!err) {
-        try { localStorage.setItem(cacheKey, canvas.toDataURL('image/png')); } catch(e) {}
-      } else { afficherQRFallback(el, text, size, cacheKey); }
+        el.appendChild(c);
+        try { localStorage.setItem(cacheKey, c.toDataURL()); } catch(e){}
+      } else { _qrFallback(el, text, size, cacheKey); }
     });
     return;
   }
-  // Méthode 2: QRCode classique
+  
+  // 2. QRCode classique (qrcodejs depuis CDN)
   if (window.QRCode && typeof QRCode === 'function') {
     try {
-      new QRCode(el, {text:text,width:size,height:size,colorDark:'#0a1628',colorLight:'#ffffff',correctLevel:(QRCode.CorrectLevel||{}).M||1});
+      var d = document.createElement('div');
+      el.appendChild(d);
+      new QRCode(d, {
+        text: text, width: size, height: size,
+        colorDark: '#000000', colorLight: '#ffffff',
+        correctLevel: (QRCode.CorrectLevel || {}).M || 1
+      });
       return;
     } catch(e) {}
   }
-  afficherQRFallback(el, text, size, cacheKey);
+  
+  _qrFallback(el, text, size, cacheKey);
 }
 
-function afficherQRFallback(el, text, size, cacheKey) {
-  // Cache hors ligne
-  var cached = localStorage.getItem(cacheKey || 'qrcache_'+text.replace(/[^a-z0-9]/gi,'').slice(0,30));
-  if (cached) {
-    el.innerHTML = '<img src="'+cached+'" style="width:'+size+'px;height:'+size+'px;border-radius:6px;"/>';
+function _qrFallback(el, text, size, cacheKey) {
+  // 3. Cache local
+  var cached = localStorage.getItem(cacheKey || 'qrcache_'+btoa(unescape(encodeURIComponent(text))).replace(/[^a-z0-9]/gi,'').slice(0,25));
+  if (cached && cached.length > 100) {
+    el.innerHTML = '<img src="'+cached+'" style="width:'+size+'px;height:'+size+'px;display:block;border-radius:4px;"/>';
     return;
   }
-  // Google Charts si en ligne
+  
+  // 4. Plusieurs APIs QR en cascade
+  var apis = [
+    'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(text)+'&format=png&margin=1',
+    'https://quickchart.io/qr?text='+encodeURIComponent(text)+'&size='+size+'&dark=000000&light=ffffff',
+    'https://chart.googleapis.com/chart?chs='+size+'x'+size+'&cht=qr&chl='+encodeURIComponent(text)
+  ];
+  
+  function tryApi(idx) {
+    if (idx >= apis.length) {
+      // 5. Dernier recours - afficher le code
+      var code = text.split('|')[1] || text;
+      el.innerHTML = '<div style="width:'+size+'px;height:'+size+'px;background:#1a3a5a;border:2px solid #4eff9b;display:flex;align-items:center;justify-content:center;font-size:12px;color:#4eff9b;text-align:center;font-weight:900;border-radius:6px;padding:4px;">'+code+'</div>';
+      return;
+    }
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      el.innerHTML = '';
+      el.appendChild(img);
+      img.style.cssText = 'width:'+size+'px;height:'+size+'px;display:block;border-radius:4px;';
+      // Sauvegarder en cache
+      try {
+        var c = document.createElement('canvas');
+        c.width = size; c.height = size;
+        var ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, size, size);
+        localStorage.setItem(cacheKey, c.toDataURL());
+      } catch(e) {}
+    };
+    img.onerror = function() { tryApi(idx + 1); };
+    img.src = apis[idx];
+  }
+  
   if (navigator.onLine) {
-    var img = document.createElement('img');
-    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(text)+'&bgcolor=ffffff&color=0a1628&format=png';
-    img.style.cssText = 'width:100%;height:100%;display:block;border-radius:4px;';
-    el.appendChild(img);
-    return;
+    tryApi(0);
+  } else {
+    var code = text.split('|')[1] || text;
+    el.innerHTML = '<div style="width:'+size+'px;height:'+size+'px;background:#1a3a5a;border:2px solid #4eff9b;display:flex;align-items:center;justify-content:center;font-size:12px;color:#4eff9b;text-align:center;font-weight:900;border-radius:6px;padding:4px;">'+code+'</div>';
   }
-  // Hors ligne sans cache : afficher le code
-  el.innerHTML = '<div style="width:'+size+'px;height:'+size+'px;background:#1a2a3a;display:flex;align-items:center;justify-content:center;font-size:11px;color:#4eff9b;text-align:center;border-radius:6px;font-weight:700;padding:4px;">'+text.split('|')[1]+'</div>';
 }
+
+function afficherQRFallback(el, text, size) {
+  _qrFallback(el, text, size, null);
+}
+
 // ═══════════════════════════════════════════════════
 
 </script>
