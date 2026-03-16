@@ -233,8 +233,11 @@ async function jsonbinGet() {
           if (data.montants && !Array.isArray(data.montants)) {
             data.montants = Object.values(data.montants);
           }
-          if (data.comptes && data.comptes.comite && !Array.isArray(data.comptes.comite)) {
-            data.comptes.comite = Object.values(data.comptes.comite);
+          if (data.comptes && data.comptes.comite) {
+            // Firebase stocke comme objet - convertir en tableau
+            if (!Array.isArray(data.comptes.comite)) {
+              data.comptes.comite = Object.values(data.comptes.comite);
+            }
           }
           resolve(data);
         }
@@ -710,9 +713,60 @@ return['<div style="background:linear-gradient(135deg,#0a1628,#0d1e3a);border:1p
 '<div class="card" style="border-color:rgba(255,179,71,0.2)"><div style="color:var(--or);font-weight:800;font-size:14px;margin-bottom:14px">&#x1F4B0; Montants de cotisation</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+montantsHTML+'</div><div style="display:flex;gap:8px;margin-bottom:6px"><input id="admin-montant-input" type="number" min="100" step="500" placeholder="Ex: 25000" style="flex:1"/><button class="btn btn-or" onclick="ajouterMontantAdmin()" style="padding:10px 16px">&#x2795;</button></div><div id="admin-montant-err" style="display:none;color:var(--rouge);font-size:12px;margin-bottom:10px"></div></div>',
 '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="color:var(--or);font-weight:800;font-size:14px">&#x1F4CB; Journal</div><button onclick="effacerJournal()" class="btn btn-ghost" style="font-size:11px;padding:6px 12px">&#x1F5D1; Effacer</button></div>',journalHTML,'</div>'].join('');}
 
-async function ajouterCompteComite(){var nom=prompt('Nom :');if(!nom||!nom.trim())return;var id=prompt('Identifiant (sans espaces) :');if(!id||id.indexOf(' ')>=0){notifier('&#x26A0; Identifiant invalide','danger');return;}var idClean=id.trim().toLowerCase();var comptes=getComptes()||{admin:{hash:'',nom:'Admin'},comite:[]};if((comptes.comite||[]).find(function(c){return c.id===idClean;})){notifier('&#x26A0; ID déjà utilisé','danger');return;}var mdp=prompt('Mot de passe (min 4 car.) :');if(!mdp||mdp.length<4){notifier('&#x26A0; MDP trop court','danger');return;}comptes.comite.push({id:idClean,nom:nom.trim(),hash:await sha256(mdp)});sauvegarderComptes(comptes);journaliser('COMPTE CRÉÉ',nom+' ('+idClean+')');notifier('&#x2705; '+nom+' créé');afficherVue();}
-async function reinitMdpComite(id){var comptes=getComptes(),compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===id;});if(!compte)return;var mdp=prompt('Nouveau MDP pour '+compte.nom+' :');if(!mdp||mdp.length<4){notifier('&#x26A0; MDP trop court','danger');return;}compte.hash=await sha256(mdp);sauvegarderComptes(comptes);journaliser('MDP MODIFIÉ',compte.nom);notifier('&#x2705; MDP mis à jour');}
-function supprimerCompteComite(id){var comptes=getComptes(),compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===id;});if(!compte)return;if(!confirm('Supprimer '+compte.nom+' ?'))return;comptes.comite=comptes.comite.filter(function(c){return c.id!==id;});sauvegarderComptes(comptes);notifier('&#x1F5D1; '+compte.nom+' supprimé','danger');afficherVue();}
+async function ajouterCompteComite(){
+  var nom=prompt('Nom :');
+  if(!nom||!nom.trim())return;
+  var id=prompt('Identifiant (sans espaces) :');
+  if(!id||id.indexOf(' ')>=0){notifier('&#x26A0; Identifiant invalide','danger');return;}
+  var idClean=id.trim().toLowerCase();
+  var mdp=prompt('Mot de passe (min 4 car.) :');
+  if(!mdp||mdp.length<4){notifier('&#x26A0; MDP trop court','danger');return;}
+  var h=await sha256(mdp);
+  // Sauvegarder directement dans Firebase par ID (évite le problème de tableau)
+  await firebase.database().ref('assemblee-royale-data/comptes/comite/'+idClean).set({
+    id:idClean, nom:nom.trim(), hash:h
+  });
+  // Mettre à jour localement
+  var comptes=getComptes()||{admin:{hash:'',nom:'Admin'},comite:[]};
+  if(!Array.isArray(comptes.comite)) comptes.comite=Object.values(comptes.comite||{});
+  if(comptes.comite.find(function(c){return c.id===idClean;})){
+    notifier('&#x26A0; ID deja utilise','danger');return;
+  }
+  comptes.comite.push({id:idClean,nom:nom.trim(),hash:h});
+  sauvegarderComptesLocal(comptes);
+  journaliser('COMPTE CREE',nom+' ('+idClean+')');
+  notifier('&#x2705; '+nom+' cree');
+  afficherVue();
+}
+
+async function reinitMdpComite(id){
+  var comptes=getComptes();
+  var compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===id;});
+  if(!compte)return;
+  var mdp=prompt('Nouveau MDP pour '+compte.nom+' :');
+  if(!mdp||mdp.length<4){notifier('&#x26A0; MDP trop court','danger');return;}
+  var h=await sha256(mdp);
+  // Mettre à jour directement dans Firebase
+  await firebase.database().ref('assemblee-royale-data/comptes/comite/'+id+'/hash').set(h);
+  compte.hash=h;
+  sauvegarderComptesLocal(comptes);
+  journaliser('MDP MODIFIE',compte.nom);
+  notifier('&#x2705; MDP mis a jour');
+}
+
+function supprimerCompteComite(id){
+  var comptes=getComptes();
+  var compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===id;});
+  if(!compte)return;
+  if(!confirm('Supprimer '+compte.nom+' ?'))return;
+  // Supprimer directement dans Firebase
+  firebase.database().ref('assemblee-royale-data/comptes/comite/'+id).remove();
+  comptes.comite=comptes.comite.filter(function(c){return c.id!==id;});
+  sauvegarderComptesLocal(comptes);
+  notifier('&#x1F5D1; '+compte.nom+' supprime','danger');
+  afficherVue();
+}
+
 async function changerMdpAdmin(){var actuel=prompt('MDP admin actuel :');if(!actuel)return;var comptes=getComptes();if(await sha256(actuel)!==comptes.admin.hash){notifier('&#x26A0; MDP incorrect','danger');return;}var nouveau=prompt('Nouveau MDP (min 6 car.) :');if(!nouveau||nouveau.length<6){notifier('&#x26A0; Trop court','danger');return;}if(prompt('Confirmer :')!==nouveau){notifier('&#x26A0; Ne correspond pas','danger');return;}comptes.admin.hash=await sha256(nouveau);sauvegarderComptes(comptes);notifier('&#x2705; MDP admin mis à jour !');}
 async function changerMdpPropre(){if(ROLE_ACTUEL==='admin'){changerMdpAdmin();return;}var actuel=prompt('Votre MDP actuel :');if(!actuel)return;var comptes=getComptes(),compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===(COMPTE_ACTUEL&&COMPTE_ACTUEL.id);});if(!compte||await sha256(actuel)!==compte.hash){notifier('&#x26A0; MDP incorrect','danger');return;}var nouveau=prompt('Nouveau MDP (min 4) :');if(!nouveau||nouveau.length<4){notifier('&#x26A0; Trop court','danger');return;}if(prompt('Confirmer :')!==nouveau){notifier('&#x26A0; Ne correspond pas','danger');return;}compte.hash=await sha256(nouveau);sauvegarderComptes(comptes);notifier('&#x2705; MDP mis à jour !');}
 function effacerJournal(){if(!confirm('Effacer le journal ?'))return;localStorage.removeItem('temple_journal');notifier('Journal effacé');afficherVue();}
