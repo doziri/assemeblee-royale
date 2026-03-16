@@ -772,8 +772,40 @@ function supprimerCompteComite(id){
   afficherVue();
 }
 
-async function changerMdpAdmin(){var actuel=prompt('MDP admin actuel :');if(!actuel)return;var comptes=getComptes();if(await sha256(actuel)!==comptes.admin.hash){notifier('&#x26A0; MDP incorrect','danger');return;}var nouveau=prompt('Nouveau MDP (min 6 car.) :');if(!nouveau||nouveau.length<6){notifier('&#x26A0; Trop court','danger');return;}if(prompt('Confirmer :')!==nouveau){notifier('&#x26A0; Ne correspond pas','danger');return;}comptes.admin.hash=await sha256(nouveau);sauvegarderComptes(comptes);notifier('&#x2705; MDP admin mis à jour !');}
-async function changerMdpPropre(){if(ROLE_ACTUEL==='admin'){changerMdpAdmin();return;}var actuel=prompt('Votre MDP actuel :');if(!actuel)return;var comptes=getComptes(),compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===(COMPTE_ACTUEL&&COMPTE_ACTUEL.id);});if(!compte||await sha256(actuel)!==compte.hash){notifier('&#x26A0; MDP incorrect','danger');return;}var nouveau=prompt('Nouveau MDP (min 4) :');if(!nouveau||nouveau.length<4){notifier('&#x26A0; Trop court','danger');return;}if(prompt('Confirmer :')!==nouveau){notifier('&#x26A0; Ne correspond pas','danger');return;}compte.hash=await sha256(nouveau);sauvegarderComptes(comptes);notifier('&#x2705; MDP mis à jour !');}
+async function changerMdpAdmin(){
+  var actuel=prompt('MDP admin actuel :');
+  if(!actuel)return;
+  var comptes=getComptes()||await initCompteParDefaut();
+  if(await sha256(actuel)!==comptes.admin.hash){notifier('&#x26A0; MDP incorrect','danger');return;}
+  var nouveau=prompt('Nouveau MDP (min 6 car.) :');
+  if(!nouveau||nouveau.length<6){notifier('&#x26A0; Trop court','danger');return;}
+  if(prompt('Confirmer :')!==nouveau){notifier('&#x26A0; Ne correspond pas','danger');return;}
+  var h=await sha256(nouveau);
+  // Sauvegarder directement dans Firebase
+  await firebase.database().ref('assemblee-royale-data/comptes/admin/hash').set(h);
+  comptes.admin.hash=h;
+  sauvegarderComptesLocal(comptes);
+  notifier('&#x2705; MDP admin mis a jour sur tous les appareils !');
+}
+
+async function changerMdpPropre(){
+  if(ROLE_ACTUEL==='admin'){changerMdpAdmin();return;}
+  var actuel=prompt('Votre MDP actuel :');
+  if(!actuel)return;
+  var comptes=getComptes();
+  var compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===(COMPTE_ACTUEL&&COMPTE_ACTUEL.id);});
+  if(!compte||await sha256(actuel)!==compte.hash){notifier('&#x26A0; MDP incorrect','danger');return;}
+  var nouveau=prompt('Nouveau MDP (min 4) :');
+  if(!nouveau||nouveau.length<4){notifier('&#x26A0; Trop court','danger');return;}
+  if(prompt('Confirmer :')!==nouveau){notifier('&#x26A0; Ne correspond pas','danger');return;}
+  var h=await sha256(nouveau);
+  // Sauvegarder directement dans Firebase
+  await firebase.database().ref('assemblee-royale-data/comptes/comite/'+compte.id+'/hash').set(h);
+  compte.hash=h;
+  sauvegarderComptesLocal(comptes);
+  notifier('&#x2705; MDP mis a jour sur tous les appareils !');
+}
+
 function effacerJournal(){if(!confirm('Effacer le journal ?'))return;localStorage.removeItem('temple_journal');notifier('Journal effacé');afficherVue();}
 function ajouterMontantAdmin(){var input=document.getElementById('admin-montant-input');var errEl=document.getElementById('admin-montant-err');var val=parseInt(input?input.value:0);if(!val||val<100){if(errEl){errEl.textContent='&#x26A0; Montant invalide';errEl.style.display='block';}return;}if(MONTANTS.indexOf(val)>=0){if(errEl){errEl.textContent='&#x26A0; Ce montant existe déjà';errEl.style.display='block';}return;}if(errEl)errEl.style.display='none';MONTANTS.push(val);MONTANTS.sort(function(a,b){return a-b;});sauvegarderMontants();sauvegarderCloud();if(input)input.value='';notifier('&#x2705; '+fmt(val)+' ajouté');afficherVue();}
 function supprimerMontant(m){if(MONTANTS.length<=1){notifier('&#x26A0; Gardez au moins un montant','danger');return;}MONTANTS=MONTANTS.filter(function(x){return x!==m;});sauvegarderMontants();sauvegarderCloud();notifier('&#x1F5D1; '+fmt(m)+' retiré','danger');afficherVue();}
