@@ -6,6 +6,16 @@
 <title>⛪ Temple – Espace Comité</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+// Vérifier que jsQR est chargé, sinon charger depuis unpkg
+window.addEventListener('load', function(){
+  if(typeof jsQR !== 'function'){
+    var s = document.createElement('script');
+    s.src = 'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js';
+    document.head.appendChild(s);
+  }
+});
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script>
@@ -573,69 +583,154 @@ async function activerScanner(){
   var container=document.getElementById('scanner-video-container');
   var btnActiver=document.getElementById('btn-activer-scanner');
   var btnArreter=document.getElementById('btn-arreter-scanner');
+
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    if(errEl){errEl.textContent='&#x26A0; Caméra non disponible sur cet appareil.';errEl.style.display='block';}
+    if(errEl){errEl.textContent='Camera non disponible sur cet appareil.';errEl.style.display='block';}
     return;
   }
-  try{
-    // Essayer d'abord caméra arrière (environment), sinon accepter n'importe laquelle
-    var constraints={video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}};
-    try{
-      scannerStream=await navigator.mediaDevices.getUserMedia(constraints);
-    }catch(e2){
-      scannerStream=await navigator.mediaDevices.getUserMedia({video:true});
+
+  // Détecter iOS
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  try {
+    // Contraintes optimisées pour chaque plateforme
+    var constraints;
+    if(isIOS) {
+      // iOS Safari/Chrome : contraintes minimales
+      constraints = { video: { facingMode: 'environment' }, audio: false };
+    } else {
+      // Android/Desktop : haute résolution
+      constraints = { 
+        video: { facingMode: {ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} },
+        audio: false 
+      };
     }
-    var video=document.getElementById('scanner-video');
-    if(!video)return;
-    video.srcObject=scannerStream;
+
+    try {
+      scannerStream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch(e1) {
+      // Fallback : accepter n'importe quelle caméra
+      scannerStream = await navigator.mediaDevices.getUserMedia({video:true, audio:false});
+    }
+
+    var video = document.getElementById('scanner-video');
+    if(!video) return;
+
+    // Attributs essentiels pour iOS
     video.setAttribute('playsinline','true');
-    await video.play();
-    // Attendre que la vidéo soit vraiment prête
+    video.setAttribute('webkit-playsinline','true');
+    video.setAttribute('autoplay','true');
+    video.setAttribute('muted','true');
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = scannerStream;
+
+    // Attendre que la vidéo soit prête (iOS a besoin de plus de temps)
     await new Promise(function(resolve){
-      if(video.readyState>=video.HAVE_ENOUGH_DATA){resolve();return;}
-      video.addEventListener('canplay',resolve,{once:true});
-      setTimeout(resolve,2000); // timeout 2s
+      var resolved = false;
+      function done(){ if(!resolved){resolved=true;resolve();} }
+      video.onloadedmetadata = done;
+      video.oncanplay = done;
+      video.oncanplaythrough = done;
+      setTimeout(done, isIOS ? 2000 : 1000);
     });
-    if(placeholder)placeholder.style.display='none';
-    if(container)container.style.display='block';
-    if(btnActiver)btnActiver.style.display='none';
-    if(btnArreter)btnArreter.style.display='flex';
-    if(errEl)errEl.style.display='none';
-    scannerActif=true;
+
+    try { await video.play(); } catch(e){}
+
+    // Vérifier que la vidéo tourne vraiment
+    await new Promise(function(resolve){ setTimeout(resolve, isIOS ? 800 : 300); });
+
+    if(placeholder) placeholder.style.display='none';
+    if(container) container.style.display='block';
+    if(btnActiver) btnActiver.style.display='none';
+    if(btnArreter) btnArreter.style.display='flex';
+    if(errEl) errEl.style.display='none';
+
+    scannerActif = true;
     scannerBoucle();
-  }catch(e){
-    var msg=e.name==='NotAllowedError'?'&#x26A0; Permission caméra refusée. Autorisez l\'accès dans les réglages.':'&#x26A0; Impossible d\'accéder à la caméra : '+e.message;
-    if(errEl){errEl.textContent=msg;errEl.style.display='block';}
+
+  } catch(e){
+    var msg;
+    if(e.name==='NotAllowedError'){
+      msg = isIOS 
+        ? 'Autorisation camera refusee. Allez dans Reglages > Safari > Camera > Autoriser.'
+        : 'Autorisation camera refusee. Verifiez les permissions dans les reglages.';
+    } else {
+      msg = 'Impossible acces camera: ' + e.message;
+    }
+    if(errEl){ errEl.textContent=msg; errEl.style.display='block'; }
   }
 }
-function arreterScanner(){scannerActif=false;if(scannerAnimFrame){cancelAnimationFrame(scannerAnimFrame);scannerAnimFrame=null;}if(scannerStream){scannerStream.getTracks().forEach(function(t){t.stop();});scannerStream=null;}var container=document.getElementById('scanner-video-container');var placeholder=document.getElementById('scanner-placeholder');var btnActiver=document.getElementById('btn-activer-scanner');var btnArreter=document.getElementById('btn-arreter-scanner');if(container)container.style.display='none';if(placeholder)placeholder.style.display='block';if(btnActiver)btnActiver.style.display='flex';if(btnArreter)btnArreter.style.display='none';}
+
+function arreterScanner(){
+  scannerActif=false;
+  if(scannerAnimFrame){cancelAnimationFrame(scannerAnimFrame);scannerAnimFrame=null;}
+  if(scannerStream){scannerStream.getTracks().forEach(function(t){t.stop();});scannerStream=null;}
+  var container=document.getElementById('scanner-video-container');
+  var placeholder=document.getElementById('scanner-placeholder');
+  var btnActiver=document.getElementById('btn-activer-scanner');
+  var btnArreter=document.getElementById('btn-arreter-scanner');
+  if(container)container.style.display='none';
+  if(placeholder)placeholder.style.display='block';
+  if(btnActiver)btnActiver.style.display='flex';
+  if(btnArreter)btnArreter.style.display='none';
+}
+
 function scannerBoucle(){
-  if(!scannerActif)return;
+  if(!scannerActif) return;
   var video=document.getElementById('scanner-video');
   var canvas=document.getElementById('scanner-canvas');
-  if(!video||!canvas){scannerAnimFrame=requestAnimationFrame(scannerBoucle);return;}
-  if(video.readyState<video.HAVE_ENOUGH_DATA){scannerAnimFrame=requestAnimationFrame(scannerBoucle);return;}
-  canvas.width=video.videoWidth||640;
-  canvas.height=video.videoHeight||480;
+
+  if(!video||!canvas){
+    scannerAnimFrame=requestAnimationFrame(scannerBoucle);
+    return;
+  }
+
+  // Attendre que la vidéo ait vraiment des données
+  if(video.readyState<2||!video.videoWidth||!video.videoHeight){
+    scannerAnimFrame=requestAnimationFrame(function(){setTimeout(scannerBoucle,200);});
+    return;
+  }
+
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
   var ctx=canvas.getContext('2d',{willReadFrequently:true});
-  try{
+
+  try {
     ctx.drawImage(video,0,0,canvas.width,canvas.height);
-    var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+
+    // Méthode 1: jsQR - fonctionne sur tous les navigateurs
     if(typeof jsQR==='function'){
-      var code=jsQR(imageData.data,imageData.width,imageData.height,{inversionAttempts:'attemptBoth'});
+      // Pleine résolution
+      var data=ctx.getImageData(0,0,canvas.width,canvas.height);
+      var code=jsQR(data.data,data.width,data.height,{inversionAttempts:'attemptBoth'});
       if(code&&code.data){traiterQRCode(code.data);return;}
+
+      // Résolution réduite (meilleur pour iOS)
+      if(canvas.width>640){
+        var sc=document.createElement('canvas');
+        sc.width=640; sc.height=Math.round(canvas.height*640/canvas.width);
+        sc.getContext('2d').drawImage(canvas,0,0,sc.width,sc.height);
+        var sd=sc.getContext('2d').getImageData(0,0,sc.width,sc.height);
+        var code2=jsQR(sd.data,sd.width,sd.height,{inversionAttempts:'attemptBoth'});
+        if(code2&&code2.data){traiterQRCode(code2.data);return;}
+      }
     }
+
+    // Méthode 2: BarcodeDetector natif (Android Chrome, Chrome desktop)
     if(window.BarcodeDetector){
       var bd=new BarcodeDetector({formats:['qr_code']});
       bd.detect(canvas).then(function(barcodes){
-        if(barcodes.length>0)traiterQRCode(barcodes[0].rawValue);
+        if(barcodes.length>0&&scannerActif)traiterQRCode(barcodes[0].rawValue);
       }).catch(function(){});
     }
-  }catch(e){}
-  scannerAnimFrame=requestAnimationFrame(function(){
-    if(scannerActif)setTimeout(scannerBoucle,150);
-  });
+
+  } catch(e){}
+
+  scannerAnimFrame=requestAnimationFrame(function(){setTimeout(scannerBoucle,150);});
 }
+
+
 var dernierCodeScanne='',dernierScanTs=0;
 function traiterQRCode(data){var now=Date.now();if(data===dernierCodeScanne&&now-dernierScanTs<3000)return;dernierCodeScanne=data;dernierScanTs=now;var membreId='';var urlMatch=data.match(/[?&]code=([A-Z0-9-]+)/i);if(urlMatch)membreId=urlMatch[1].toUpperCase();if(!membreId&&data.match(/^MBR-\d+$/))membreId=data;if(!membreId&&data.startsWith('TEMPLE|')){var parts=data.split('|');if(parts[1])membreId=parts[1];}if(!membreId){afficherResultatScan('&#x26A0; QR Code non reconnu : '+data,'err');return;}var m=MEMBRES.find(function(x){return x.id===membreId;});if(!m){afficherResultatScan('&#x26A0; Membre introuvable : '+membreId,'err');return;}if(navigator.vibrate)navigator.vibrate(200);arreterScanner();afficherResultatScan('&#x2705; Membre trouvé : '+m.nom,'ok');setTimeout(function(){ouvrirValidation(m.id);},800);}
 function afficherResultatScan(msg,type){var el=document.getElementById('scanner-result');if(!el)return;el.style.display='block';el.style.background=type==='ok'?'var(--vertD)':'var(--rougeD)';el.style.borderColor=type==='ok'?'rgba(78,255,155,0.3)':'rgba(255,107,107,0.3)';el.style.color=type==='ok'?'var(--vert)':'var(--rouge)';el.innerHTML='<b style="font-size:15px">'+msg+'</b>';}
