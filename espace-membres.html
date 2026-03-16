@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>⛪ Temple – Espace Membres</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script>
@@ -18,6 +19,58 @@ firebase.initializeApp({
   appId: "1:1006599645097:web:911e92e5eeb049b42146b8"
 });
 var db = firebase.database();
+</script>
+<script>
+
+// ═══ QR CODE HORS LIGNE - Cache localStorage ═══
+function afficherQRCode(elId, text, size) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = '';
+  size = size || 94;
+  var cacheKey = 'qrcache_' + text.replace(/[^a-z0-9]/gi,'').slice(0,30);
+
+  // Méthode 1: qrcode.js canvas
+  if (window.QRCode && typeof QRCode.toCanvas === 'function') {
+    var canvas = document.createElement('canvas');
+    el.appendChild(canvas);
+    QRCode.toCanvas(canvas, text, {width:size, color:{dark:'#0a1628',light:'#ffffff'}}, function(err) {
+      if (!err) {
+        try { localStorage.setItem(cacheKey, canvas.toDataURL('image/png')); } catch(e) {}
+      } else { afficherQRFallback(el, text, size, cacheKey); }
+    });
+    return;
+  }
+  // Méthode 2: QRCode classique
+  if (window.QRCode && typeof QRCode === 'function') {
+    try {
+      new QRCode(el, {text:text,width:size,height:size,colorDark:'#0a1628',colorLight:'#ffffff',correctLevel:(QRCode.CorrectLevel||{}).M||1});
+      return;
+    } catch(e) {}
+  }
+  afficherQRFallback(el, text, size, cacheKey);
+}
+
+function afficherQRFallback(el, text, size, cacheKey) {
+  // Cache hors ligne
+  var cached = localStorage.getItem(cacheKey || 'qrcache_'+text.replace(/[^a-z0-9]/gi,'').slice(0,30));
+  if (cached) {
+    el.innerHTML = '<img src="'+cached+'" style="width:'+size+'px;height:'+size+'px;border-radius:6px;"/>';
+    return;
+  }
+  // Google Charts si en ligne
+  if (navigator.onLine) {
+    var img = document.createElement('img');
+    img.src = 'https://chart.googleapis.com/chart?chs='+size+'x'+size+'&cht=qr&chl='+encodeURIComponent(text)+'&choe=UTF-8';
+    img.style.cssText = 'width:'+size+'px;height:'+size+'px;border-radius:6px;';
+    el.appendChild(img);
+    return;
+  }
+  // Hors ligne sans cache : afficher le code
+  el.innerHTML = '<div style="width:'+size+'px;height:'+size+'px;background:#1a2a3a;display:flex;align-items:center;justify-content:center;font-size:11px;color:#4eff9b;text-align:center;border-radius:6px;font-weight:700;padding:4px;">'+text.split('|')[1]+'</div>';
+}
+// ═══════════════════════════════════════════════════
+
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -838,21 +891,14 @@ function vueMaCarte() {
 
 function genererQRCarte() {
   var m = MEMBRE_CONNECTE;
-  if (!m || !window.QRCode) return;
+  if (!m) return;
   var mFrais = MEMBRES.find(function(x){ return x.id===m.id; }) || m;
-  var el = document.getElementById('qr-macarte');
-  if (!el) return;
-  el.innerHTML = '';
-  try {
-    new QRCode(el, {
-      text: 'TEMPLE|'+mFrais.id+'|'+mFrais.nom+'|'+mFrais.montant,
-      width: 94, height: 94,
-      colorDark: '#0a1628', colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
-  } catch(e) {
-    el.innerHTML = '<div style="width:94px;height:94px;background:#111;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--grisC);text-align:center">'+mFrais.id+'</div>';
-  }
+  var qrText = 'TEMPLE|'+mFrais.id+'|'+mFrais.nom+'|'+mFrais.montant;
+  afficherQRCode('qr-macarte', qrText, 94);
+}
+
+function genererQRCodeFallback(el, mFrais, qrText) {
+  afficherQRFallback(el, qrText, 94);
 }
 
 function imprimerMaCarte() {
