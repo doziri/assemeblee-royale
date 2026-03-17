@@ -759,17 +759,15 @@ function vueClassement() {
 }
 
 function anonymiserNom(nom) {
-  // Afficher seulement les initiales : "Jean-Pierre KOUASSI" -> "J-P. K***"
-  var parties = nom.trim().split(' ');
-  return parties.map(function(p, i) {
-    if (!p) return '';
-    if (i === parties.length - 1 && parties.length > 1) {
-      // Dernier mot (nom de famille) : première lettre + ***
-      return p[0].toUpperCase() + '***';
-    }
-    // Prénoms : initiale seulement
-    return p[0].toUpperCase() + '.';
-  }).join(' ');
+  // Anonymisation maximale : juste "Membre #XXX" avec un numéro aléatoire stable
+  // basé sur le nom (même numéro à chaque fois pour le même membre)
+  var hash = 0;
+  for (var i = 0; i < nom.length; i++) {
+    hash = ((hash << 5) - hash) + nom.charCodeAt(i);
+    hash = hash & hash;
+  }
+  var num = Math.abs(hash) % 9000 + 1000;
+  return 'Membre #' + num;
 }
 
 function vueGlobal() {
