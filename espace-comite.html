@@ -244,9 +244,9 @@ async function jsonbinGet() {
             data.montants = Object.values(data.montants);
           }
           if (data.comptes && data.comptes.comite) {
-            // Firebase stocke comme objet - convertir en tableau
+            // Firebase stocke comme objet {id: {...}} - convertir en tableau pour l'app
             if (!Array.isArray(data.comptes.comite)) {
-              data.comptes.comite = Object.values(data.comptes.comite);
+              data.comptes.comite = Object.values(data.comptes.comite).filter(function(c){ return c && c.id; });
             }
           }
           resolve(data);
@@ -429,7 +429,19 @@ async function reinitialiserComptes() {
     alert('Reinitialise localement. Admin: admin2024 / Comite: comite1 / comite2024');
   }
 }
-function sauvegarderComptes(c) { sauvegarderComptesLocal(c); sauvegarderCloud(true); }
+function sauvegarderComptes(c) {
+  // Convertir comite tableau -> objet pour Firebase
+  if (c && Array.isArray(c.comite)) {
+    var obj = {};
+    c.comite.forEach(function(compte) { if(compte.id) obj[compte.id] = compte; });
+    c.comite = obj;
+  }
+  sauvegarderComptesLocal(c);
+  // Sauvegarder directement dans Firebase
+  firebase.database().ref('assemblee-royale-data/comptes').set(c).catch(function(e){
+    console.log('Erreur sauvegarde comptes:', e);
+  });
+}
 
 function choisirRole(role) {
   document.getElementById('login-comite').style.display = role==='comite'?'block':'none';
