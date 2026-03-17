@@ -882,7 +882,145 @@ function vueDashboard(){var aJour=MEMBRES.filter(function(m){return statutMembre
 
 // VALIDATION
 function ouvrirValidation(id){MEMBRE_VALIDATION=MEMBRES.find(function(x){return x.id===id;});if(!MEMBRE_VALIDATION)return;MOIS_SELECTIONNES=[MOIS_COURANT()];MONTANT_RECU=MEMBRE_VALIDATION.montant;VUE_ACTUELLE='validation';afficherVue();}
-function vueValidation(){var m=MEMBRE_VALIDATION;if(!m)return'<div style="text-align:center;padding:40px;color:var(--grisC)">Aucun membre sélectionné</div>';var s=statutMembre(m),MC=MOIS_COURANT();var retards=m.paiements.map(function(p,i){return(!p&&i<=MC)?i:-1;}).filter(function(i){return i>=0;});var retardItems=retards.filter(function(i){return i!==MC;}).map(function(idx){var sel=MOIS_SELECTIONNES.indexOf(idx)>=0;return'<div onclick="toggleMoisSelection('+idx+')" id="mois-sel-'+idx+'" style="padding:10px 18px;border-radius:10px;cursor:pointer;background:'+(sel?'var(--vertD)':'#111d2a')+';border:1px solid '+(sel?'var(--vert)':'#2a1a0d')+';display:flex;justify-content:space-between;align-items:center"><div><div style="color:'+(sel?'var(--blanc)':'var(--grisC)')+';font-size:13px">'+TOUS_MOIS()[idx]+'</div><div style="color:var(--grisC);font-size:11px">'+fmt(m.montant)+'</div></div><div style="font-size:18px;color:'+(sel?'var(--vert)':'var(--grisT)')+'">'+( sel?'&#x2714;':'○')+'</div></div>';}).join('');var mcSel=MOIS_SELECTIONNES.indexOf(MC)>=0;return['<button class="btn btn-ghost" style="margin-bottom:14px;font-size:12px" onclick="changerVue(\'scanner\')">‹ Retour</button>','<div style="background:linear-gradient(135deg,#0a1e2e,#0f2030);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px"><div style="display:flex;gap:14px;align-items:center">',avatarHTML(m.nom,s),'<div style="flex:1"><div style="font-weight:800;font-size:17px">'+m.nom+'</div><div style="color:var(--grisC);font-size:12px;margin-top:2px">'+m.id+(m.tel?' · '+m.tel:'')+'</div><div style="color:var(--bleu);font-size:13px;margin-top:2px">Cotisation : <b>'+fmt(m.montant)+'/mois</b></div><div style="margin-top:8px">'+badgeHTML(s)+'</div></div></div></div>','<div class="card" style="margin-bottom:14px"><div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:14px">Mois à valider</div><div style="color:var(--or);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:8px">MOIS EN COURS</div>','<div onclick="toggleMoisSelection('+MC+')" id="mois-sel-'+MC+'" style="padding:14px 18px;border-radius:10px;cursor:pointer;background:'+(mcSel?'var(--vertD)':'#111d2a')+';border:2px solid '+(mcSel?'var(--vert)':'var(--or)')+';display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><div style="font-weight:700">'+TOUS_MOIS()[MC]+'</div><div style="color:var(--grisC);font-size:11px">'+fmt(m.montant)+'</div></div><div style="font-size:22px;color:'+(mcSel?'var(--vert)':'#1a3a5a')+'">'+(mcSel?'&#x2714;':'○')+'</div></div>',retardItems?'<div style="color:var(--or);font-size:11px;font-weight:700;margin-bottom:8px">MOIS EN RETARD ('+retards.filter(function(i){return i!==MC;}).length+')</div><div style="display:flex;flex-direction:column;gap:6px">'+retardItems+'</div>':'','</div>','<div class="card" style="margin-bottom:14px"><div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MONTANT REÇU</div><div style="display:flex;gap:10px;align-items:center"><input type="number" id="montant-recu" value="'+MONTANT_RECU+'" style="flex:1;font-size:18px;font-weight:700;color:var(--vert)"/><span style="color:var(--grisC)">F CFA</span></div><div id="recap-ligne" style="margin-top:10px;font-size:13px"></div></div>','<div class="card" style="background:linear-gradient(135deg,#0a1e14,#0d3a1a);border-color:rgba(78,255,155,0.2);margin-bottom:14px"><div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:12px">Récapitulatif</div><div id="recap-content"></div><button class="btn btn-primary btn-full" style="margin-top:16px;font-size:15px" onclick="confirmerValidation()" id="btn-confirmer">&#x2705; Confirmer et générer le reçu</button></div>'].join('');}
+function vueValidation(){
+  var m=MEMBRE_VALIDATION;
+  if(!m)return'<div style="text-align:center;padding:40px;color:var(--grisC)">Aucun membre selectionne</div>';
+  var s=statutMembre(m),MC=MOIS_COURANT();
+
+  // Mois impayés jusqu'au mois courant (retards + courant)
+  var moisDus=m.paiements.map(function(p,i){return(!p&&i<=MC)?i:-1;}).filter(function(i){return i>=0;});
+  // Mois futurs non payés
+  var moisFuturs=m.paiements.map(function(p,i){return(!p&&i>MC)?i:-1;}).filter(function(i){return i>=0;});
+
+  // Boutons rapides
+  var btnsRapides=[
+    ['Tout payer','selectionnerTout()','var(--vert)','var(--vertD)'],
+    ['Mois courant','selectionnerMoisCourant()','var(--or)','var(--orD)'],
+    ['2 mois','selectionnerNMois(2)','var(--bleu)','var(--bleuD)'],
+    ['3 mois','selectionnerNMois(3)','var(--bleu)','var(--bleuD)'],
+    ['4 mois','selectionnerNMois(4)','var(--bleu)','var(--bleuD)'],
+    ['6 mois','selectionnerNMois(6)','var(--bleu)','var(--bleuD)'],
+    ['12 mois','selectionnerNMois(12)','#c084fc','#3b1f6e'],
+    ['Tout désélectionner','deselectionnerTout()','var(--grisC)','var(--card)'],
+  ].map(function(b){
+    return'<button onclick="'+b[1]+'" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;border:1px solid '+b[2]+'44;background:'+b[3]+';color:'+b[2]+';font-family:inherit;white-space:nowrap">'+b[0]+'</button>';
+  }).join('');
+
+  // Mois dus (retards + courant)
+  var moisDusHTML = moisDus.map(function(idx){
+    var sel=MOIS_SELECTIONNES.indexOf(idx)>=0;
+    var isCourant=idx===MC;
+    return'<div onclick="toggleMoisSelection('+idx+')" id="mois-sel-'+idx+'" style="padding:10px 14px;border-radius:10px;cursor:pointer;background:'+(sel?'var(--vertD)':'#111d2a')+';border:1px solid '+(sel?'var(--vert)':isCourant?'var(--or)':'#2a3a4a')+';display:flex;justify-content:space-between;align-items:center">'
+      +'<div>'
+        +'<div style="color:'+(sel?'var(--blanc)':'var(--grisC)')+';font-size:13px;font-weight:'+(isCourant?'700':'400')+'">'+TOUS_MOIS()[idx]+(isCourant?' <span style="background:var(--orD);color:var(--or);font-size:9px;padding:1px 6px;border-radius:4px;">EN COURS</span>':'')+'</div>'
+        +'<div style="color:var(--grisC);font-size:11px">'+fmt(m.montant)+'</div>'
+      +'</div>'
+      +'<div style="font-size:20px;color:'+(sel?'var(--vert)':'var(--grisT)')+'">'+(sel?'&#x2714;':'&#x25CB;')+'</div>'
+    +'</div>';
+  }).join('');
+
+  // Mois futurs (paiement en avance)
+  var moisFutursHTML = moisFuturs.length ? [
+    '<div style="color:var(--bleu);font-size:11px;font-weight:700;margin:12px 0 8px">PAIEMENT EN AVANCE</div>',
+    '<div style="display:flex;flex-direction:column;gap:6px">',
+    moisFuturs.slice(0,12).map(function(idx){
+      var sel=MOIS_SELECTIONNES.indexOf(idx)>=0;
+      return'<div onclick="toggleMoisSelection('+idx+')" id="mois-sel-'+idx+'" style="padding:10px 14px;border-radius:10px;cursor:pointer;background:'+(sel?'var(--bleuD)':'#111d2a')+';border:1px solid '+(sel?'var(--bleu)':'#1a2a3a')+';display:flex;justify-content:space-between;align-items:center">'
+        +'<div><div style="color:'+(sel?'var(--blanc)':'var(--grisC)')+';font-size:13px">'+TOUS_MOIS()[idx]+'</div><div style="color:var(--grisC);font-size:11px">'+fmt(m.montant)+'</div></div>'
+        +'<div style="font-size:20px;color:'+(sel?'var(--bleu)':'var(--grisT)')+'">'+(sel?'&#x2714;':'&#x25CB;')+'</div>'
+      +'</div>';
+    }).join(''),
+    '</div>'
+  ].join('') : '';
+
+  return [
+    '<button class="btn btn-ghost" style="margin-bottom:14px;font-size:12px" onclick="changerVue('scanner')">&#x2039; Retour</button>',
+
+    // PROFIL MEMBRE
+    '<div style="background:linear-gradient(135deg,#0a1e2e,#0f2030);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px">',
+      '<div style="display:flex;gap:12px;align-items:center">',
+        avatarHTML(m.nom,s),
+        '<div style="flex:1"><div style="font-weight:800;font-size:17px">'+m.nom+'</div>',
+        '<div style="color:var(--grisC);font-size:12px;margin-top:2px">'+m.id+(m.tel?' · '+m.tel:'')+'</div>',
+        '<div style="color:var(--bleu);font-size:13px;margin-top:2px">Cotisation : <b>'+fmt(m.montant)+'/mois</b></div>',
+        '<div style="margin-top:8px">'+badgeHTML(s)+'</div></div>',
+      '</div>',
+    '</div>',
+
+    // BOUTONS RAPIDES
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">SELECTION RAPIDE</div>',
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">'+btnsRapides+'</div>',
+    '</div>',
+
+    // SÉLECTION DES MOIS
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:14px">Mois a valider <span id="nb-mois-sel" style="background:var(--vertD);color:var(--vert);border-radius:20px;padding:2px 10px;font-size:12px">'+MOIS_SELECTIONNES.length+'</span></div>',
+      moisDus.length ? '<div style="color:var(--or);font-size:11px;font-weight:700;margin-bottom:8px">MOIS DUS ('+moisDus.length+')</div>' : '',
+      '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px">'+moisDusHTML+'</div>',
+      moisFutursHTML,
+    '</div>',
+
+    // MONTANT
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MONTANT RECU</div>',
+      '<div style="display:flex;gap:10px;align-items:center">',
+        '<input type="number" id="montant-recu" value="'+MONTANT_RECU+'" style="flex:1;font-size:18px;font-weight:700;color:var(--vert)"/>',
+        '<span style="color:var(--grisC)">F CFA</span>',
+      '</div>',
+      '<div id="recap-ligne" style="margin-top:10px;font-size:13px"></div>',
+    '</div>',
+
+    // RÉCAPITULATIF
+    '<div class="card" style="background:linear-gradient(135deg,#0a1e14,#0d3a1a);border-color:rgba(78,255,155,0.2);margin-bottom:14px">',
+      '<div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:12px">Recapitulatif</div>',
+      '<div id="recap-content"></div>',
+      '<button class="btn btn-primary btn-full" style="margin-top:16px;font-size:15px" onclick="confirmerValidation()" id="btn-confirmer">&#x2705; Confirmer et generer le recu</button>',
+    '</div>',
+  ].join('');
+}
+
+function selectionnerTout(){
+  var MC=MOIS_COURANT();
+  MOIS_SELECTIONNES=MEMBRE_VALIDATION.paiements
+    .map(function(p,i){return(!p)?i:-1;})
+    .filter(function(i){return i>=0 && i<=MC;});
+  MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);
+  var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;
+  afficherVue();
+}
+
+function selectionnerMoisCourant(){
+  var MC=MOIS_COURANT();
+  MOIS_SELECTIONNES=[MC];
+  MONTANT_RECU=MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0;
+  var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;
+  afficherVue();
+}
+
+function selectionnerNMois(n){
+  // Sélectionner les n premiers mois impayés (retards d'abord, puis futurs)
+  var MC=MOIS_COURANT();
+  var moisDus=MEMBRE_VALIDATION.paiements
+    .map(function(p,i){return(!p&&i<=MC)?i:-1;})
+    .filter(function(i){return i>=0;});
+  var moisFuturs=MEMBRE_VALIDATION.paiements
+    .map(function(p,i){return(!p&&i>MC)?i:-1;})
+    .filter(function(i){return i>=0;});
+  var tous=moisDus.concat(moisFuturs);
+  MOIS_SELECTIONNES=tous.slice(0,n);
+  MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);
+  var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;
+  afficherVue();
+}
+
+function deselectionnerTout(){
+  MOIS_SELECTIONNES=[];
+  MONTANT_RECU=0;
+  var mr=document.getElementById('montant-recu');if(mr)mr.value=0;
+  afficherVue();
+}
+
 function toggleMoisSelection(idx){var i=MOIS_SELECTIONNES.indexOf(idx);if(i>=0)MOIS_SELECTIONNES.splice(i,1);else MOIS_SELECTIONNES.push(idx);MOIS_SELECTIONNES.sort(function(a,b){return a-b;});var el=document.getElementById('mois-sel-'+idx);if(el){var sel=MOIS_SELECTIONNES.indexOf(idx)>=0,ec=idx===MOIS_COURANT();el.style.background=sel?'var(--vertD)':'#111d2a';el.style.borderColor=sel?'var(--vert)':(ec?'var(--or)':'#2a1a0d');var last=el.querySelector('div:last-child');if(last){last.style.color=sel?'var(--vert)':'#1a3a5a';last.textContent=sel?'&#x2714;':'○';}}MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;majRecap();}
 function majRecap(){var m=MEMBRE_VALIDATION;if(!m)return;var total=MOIS_SELECTIONNES.length*m.montant,recu=MONTANT_RECU;var recap=document.getElementById('recap-content'),ligne=document.getElementById('recap-ligne');if(ligne)ligne.innerHTML='<div style="display:flex;justify-content:space-between"><span style="color:var(--grisC)">Attendu :</span><span style="color:var(--or);font-weight:700">'+fmt(total)+'</span></div>'+'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--grisC)">Reçu :</span><span style="color:'+(recu>=total?'var(--vert)':'var(--rouge)')+';font-weight:700">'+fmt(recu)+'</span></div>'+(recu<total&&recu>0?'<div style="background:var(--orD);border:1px solid rgba(255,179,71,0.3);border-radius:8px;padding:7px 12px;margin-top:8px;color:var(--or);font-size:11px">&#x26A0; Reste '+fmt(total-recu)+'</div>':'');if(recap)recap.innerHTML='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Membre</span><span style="font-weight:600">'+m.nom+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Mois</span><span style="color:var(--vert);font-weight:600">'+MOIS_SELECTIONNES.length+' mois</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Périodes</span><span style="font-size:11px;color:var(--blanc)">'+MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ')+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:10px 0 0"><span style="color:var(--grisC);font-weight:700">TOTAL</span><span style="color:var(--vert);font-weight:900;font-size:18px">'+fmt(total)+'</span></div>';var btn=document.getElementById('btn-confirmer');if(btn){btn.disabled=MOIS_SELECTIONNES.length===0;btn.style.opacity=MOIS_SELECTIONNES.length===0?'0.4':'1';}}
 function confirmerValidation(){var m=MEMBRE_VALIDATION;if(!m||!MOIS_SELECTIONNES.length)return;var moisStr=MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ');journaliser('PAIEMENT VALIDÉ',m.nom+' – '+moisStr+' – '+fmt(MOIS_SELECTIONNES.length*m.montant));var now=new Date();MOIS_SELECTIONNES.forEach(function(idx){var mb=MEMBRES.find(function(x){return x.id===m.id;});if(mb)mb.paiements[idx]=1;});sauvegarder();sauvegarderCloud();RECU_COURANT={id:'REC-'+now.getTime(),membre:Object.assign({},m),moisPayes:MOIS_SELECTIONNES.slice(),montantTotal:MOIS_SELECTIONNES.length*m.montant,montantRecu:MONTANT_RECU,date:now.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),heure:now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};VUE_ACTUELLE='recu';afficherVue();}
