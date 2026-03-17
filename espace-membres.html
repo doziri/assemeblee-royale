@@ -880,7 +880,7 @@ function vueGlobal() {
 // ══════════════════════════════════════════════════════════
 function vueMaCarte() {
   var m = MEMBRE_CONNECTE;
-  if (!m) return '<div class="empty-state"><div style="font-size:48px">🪪</div><div style="margin-top:16px;font-weight:700">Aucun membre connecté</div></div>';
+  if (!m) return '<div class="empty-state"><div style="font-size:48px">&#x1FAA9;</div><div style="margin-top:16px;font-weight:700">Aucun membre connecte</div></div>';
   var mFrais = MEMBRES.find(function(x){ return x.id===m.id; }) || m;
   var s = statutMembre(mFrais);
   var MC = MOIS_COURANT();
@@ -890,54 +890,55 @@ function vueMaCarte() {
   var strip  = {ajour:'linear-gradient(90deg,var(--vertD),var(--vert))',retard:'linear-gradient(90deg,var(--orD),var(--or))',inactif:'linear-gradient(90deg,var(--rougeD),var(--rouge))'};
 
   return [
-    '<div style="text-align:center;margin-bottom:20px">',
-      '<div style="color:var(--bleu);font-weight:800;font-size:16px;margin-bottom:6px">🪪 Ma carte membre</div>',
-      '<div style="color:var(--grisC);font-size:12px">Présentez ce QR code au comité lors du paiement</div>',
+    '<div style="text-align:center;margin-bottom:16px">',
+      '<div style="color:var(--bleu);font-weight:800;font-size:16px;margin-bottom:4px">&#x1FAA9; Ma carte membre</div>',
+      '<div style="color:var(--grisC);font-size:12px">Presentez ce QR code au comite lors du paiement</div>',
     '</div>',
 
-    // CARTE
-    '<div style="background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:20px;overflow:hidden;margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6)">',
-      '<div style="height:6px;background:'+strip[s]+'"></div>',
-      '<div style="padding:20px">',
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:10px">',
-          '<div>',
-            LOGO_DATA?'<img src="'+LOGO_DATA+'" style="height:36px;border-radius:8px;object-fit:contain;margin-bottom:8px;display:block"/>':'<div style="font-size:24px;margin-bottom:8px">⛪</div>',
-            '<div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px">'+CFG.nom_eglise+'</div>',
-            '<div style="font-weight:900;font-size:18px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">'+mFrais.nom+'</div>',
-            '<div style="color:var(--bleu);font-size:13px;font-family:monospace;font-weight:700;margin-top:3px">'+mFrais.id+'</div>',
-          '</div>',
-          '<div id="qr-macarte" style="width:94px;height:94px;flex-shrink:0;background:#fff;padding:3px;border-radius:8px;overflow:hidden;">',
-            '<div style="color:var(--grisC);font-size:10px">QR...</div>',
-          '</div>',
+    // QR CODE GRAND ET CENTRÉ EN PREMIER
+    '<div style="display:flex;justify-content:center;margin-bottom:16px">',
+      '<div style="background:#ffffff;padding:16px;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.4);display:inline-block;">',
+        '<div id="qr-macarte" style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;">',
+          '<div style="color:#999;font-size:12px;">Chargement...</div>',
         '</div>',
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">',
-          [['Cotisation',fmt(mFrais.montant)+'/m','var(--bleu)'],
-           ['Mois payés',payes+'/'+(MC+1),'var(--vert)'],
-           ['Statut',(s==='ajour'?'À jour':s==='retard'?'Retard':'Inactif'),colors[s]]
+        '<div style="text-align:center;margin-top:8px;font-size:11px;color:#333;font-weight:700;font-family:monospace;">'+mFrais.id+'</div>',
+      '</div>',
+    '</div>',
+
+    // CARTE MEMBRE EN DESSOUS
+    '<div style="background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:16px;overflow:hidden;margin-bottom:16px">',
+      '<div style="height:5px;background:'+strip[s]+'"></div>',
+      '<div style="padding:16px">',
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">',
+          LOGO_DATA ? '<img src="'+LOGO_DATA+'" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0"/>' : '',
+          '<div style="flex:1;min-width:0">',
+            '<div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px">'+CFG.nom_eglise+'</div>',
+            '<div style="font-weight:900;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+mFrais.nom+'</div>',
+            '<div style="color:var(--bleu);font-size:12px;font-family:monospace;font-weight:700;margin-top:2px">'+mFrais.id+'</div>',
+          '</div>',
+          badgeHTML(s),
+        '</div>',
+        '<div class="grid-3" style="gap:8px;margin-bottom:10px">',
+          [['Cotisation',fmt(mFrais.montant)+'/mois','var(--bleu)'],
+           ['Mois payes',payes+'/'+(MC+1),'var(--vert)'],
+           ['Solde du',manq>0?fmt(manq*mFrais.montant):'Aucun',manq>0?'var(--or)':'var(--vert)']
           ].map(function(x){
-            return '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px">'
+            return '<div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:8px">'
               +'<div style="color:var(--grisT);font-size:8px;font-weight:700;text-transform:uppercase">'+x[0]+'</div>'
-              +'<div style="color:'+x[2]+';font-weight:700;font-size:11px;margin-top:3px">'+x[1]+'</div>'
+              +'<div style="color:'+x[2]+';font-weight:700;font-size:11px;margin-top:2px">'+x[1]+'</div>'
             +'</div>';
           }).join(''),
         '</div>',
-        '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:10px">',
-          mFrais.paiements.map(function(p,idx){
-            var ec=idx===MC,pas=idx<=MC;
-            var bg=p?'#0d5c3a':ec?'#5c3a0d':pas?'#5c0d0d':'#1a2a3a';
-            return '<div style="width:10px;height:10px;border-radius:2px;background:'+bg+'"></div>';
-          }).join(''),
-        '</div>',
-        '<div style="border-top:1px solid #1a3a5a;padding-top:8px;font-size:9px;color:var(--grisT)">'+mFrais.id+(mFrais.tel?' · '+mFrais.tel:'')+'</div>',
+        '<div style="font-size:9px;color:var(--grisT);border-top:1px solid #1a3a5a;padding-top:6px">'+mFrais.id+(mFrais.tel?' · '+mFrais.tel:'')+'</div>',
       '</div>',
     '</div>',
 
     // ACTIONS
-    '<div style="display:flex;gap:10px;max-width:360px;margin:0 auto">',
-      '<button class="btn btn-vert" style="flex:1;font-size:13px;padding:13px" onclick="imprimerMaCarte()">🖨️ Imprimer</button>',
-      mFrais.tel ? '<a href="https://wa.me/'+mFrais.tel.replace(/\D/g,'')+'" target="_blank" class="btn btn-ghost" style="flex:1;text-decoration:none;font-size:13px;padding:13px">📲 WhatsApp</a>' : '',
+    '<div style="display:flex;gap:10px">',
+      '<button class="btn btn-vert" style="flex:1;font-size:13px;padding:13px" onclick="imprimerMaCarte()">&#x1F5A8; Imprimer</button>',
+      mFrais.tel ? '<a href="https://wa.me/'+mFrais.tel.replace(/\D/g,'')+'" target="_blank" class="btn btn-ghost" style="flex:1;text-decoration:none;font-size:13px;padding:13px">&#x1F4F2; WhatsApp</a>' : '',
     '</div>',
-    '<div style="text-align:center;color:var(--grisT);font-size:11px;margin-top:14px">Code QR valable pour scanner par le comité</div>',
+    '<div style="text-align:center;color:var(--grisT);font-size:11px;margin-top:12px">Code QR valable pour scanner par le comite</div>',
   ].join('');
 }
 
@@ -946,7 +947,8 @@ function genererQRCarte() {
   if (!m) return;
   var mFrais = MEMBRES.find(function(x){ return x.id===m.id; }) || m;
   var qrText = 'TEMPLE|'+mFrais.id+'|'+mFrais.nom+'|'+mFrais.montant;
-  afficherQRCode('qr-macarte', qrText, 94);
+  // QR code en 200px pour meilleure lisibilité
+  afficherQRCode('qr-macarte', qrText, 200);
 }
 
 function genererQRCodeFallback(el, mFrais, qrText) {
