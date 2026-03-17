@@ -893,7 +893,27 @@ function confirmerSuppression(){if(!MEMBRE_SUPPR_ID)return;var m=MEMBRES.find(fu
 function vueDashboard(){var aJour=MEMBRES.filter(function(m){return statutMembre(m)==='ajour';}).length;var retard=MEMBRES.filter(function(m){return statutMembre(m)==='retard';}).length;var verse=MEMBRES.reduce(function(s,m){return s+m.paiements.filter(function(p,i){return p&&i<=MOIS_COURANT();}).length*m.montant;},0);var attendu=MEMBRES.reduce(function(s,m){return s+m.montant*(MOIS_COURANT()+1);},0);var taux=attendu>0?Math.round(verse/attendu*100):0;var payesCeMois=MEMBRES.filter(function(m){return m.paiements[MOIS_COURANT()];}).length;var retardListe=MEMBRES.filter(function(m){return statutMembre(m)!=='ajour';}).slice(0,8).map(function(m){var r=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;return'<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:13px">'+m.nom+'</div><div style="color:var(--grisC);font-size:11px">'+r+' mois · dette: '+fmt(r*m.montant)+'</div></div>'+badgeHTML(statutMembre(m))+'</div>';}).join('');return['<div style="background:linear-gradient(135deg,#0a1e14,#0d2a1a);border:1px solid rgba(78,255,155,0.2);border-radius:14px;padding:16px 18px;display:flex;gap:14px;align-items:center;margin-bottom:14px">','<div style="font-size:36px">&#x1F4C5;</div><div><div style="color:var(--vert);font-weight:800;font-size:15px">Collecte – '+TOUS_MOIS()[MOIS_COURANT()]+'</div><div style="color:var(--grisC);font-size:13px;margin-top:2px"><b style="color:var(--blanc)">'+payesCeMois+'</b> membres ont payé · <b style="color:var(--or)">'+(MEMBRES.length-payesCeMois)+'</b> en attente</div></div></div>','<div class="grid-2" style="margin-bottom:14px">',[['Total encaissé',fmt(verse),'var(--vert)','#0a1e14'],['Taux',taux+'%','var(--bleu)','#0a1428'],['À jour',aJour+' membres','var(--vert)','#0a1e14'],['En retard',retard+' membres','var(--or)','#1e140a']].map(function(x){return'<div class="stat-box" style="background:'+x[3]+';border:1px solid '+x[2]+'22"><div style="color:var(--grisC);font-size:10px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:900;font-size:22px;margin-top:6px">'+x[1]+'</div></div>';}).join(''),'</div>','<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="color:var(--grisC);font-size:12px;font-weight:700">PROGRESSION</span><span style="color:var(--vert);font-weight:700">'+taux+'%</span></div><div class="progress-track"><div class="progress-fill" style="width:'+taux+'%"></div></div></div>','<div class="card"><div style="color:var(--or);font-weight:800;font-size:13px;margin-bottom:12px">&#x26A0; MEMBRES EN RETARD</div>',retardListe||'<div style="color:var(--grisC);text-align:center;padding:16px;font-size:13px">&#x1F389; Tous les membres sont à jour !</div>','</div>'].join('');}
 
 // VALIDATION
-function ouvrirValidation(id){MEMBRE_VALIDATION=MEMBRES.find(function(x){return x.id===id;});if(!MEMBRE_VALIDATION)return;MOIS_SELECTIONNES=[MOIS_COURANT()];MONTANT_RECU=MEMBRE_VALIDATION.montant;VUE_ACTUELLE='validation';afficherVue();}
+function ouvrirValidation(id){
+  MEMBRE_VALIDATION=MEMBRES.find(function(x){return x.id===id;});
+  if(!MEMBRE_VALIDATION)return;
+  var MC=MOIS_COURANT();
+  // Trouver le premier mois impayé automatiquement
+  var premierImpaye=-1;
+  for(var i=0;i<=MC;i++){
+    if(!MEMBRE_VALIDATION.paiements[i]){premierImpaye=i;break;}
+  }
+  // Si tous les mois dus sont payés, pointer sur le mois suivant
+  if(premierImpaye===-1){
+    // Chercher premier mois futur non payé
+    for(var j=MC+1;j<CFG.nb_mois;j++){
+      if(!MEMBRE_VALIDATION.paiements[j]){premierImpaye=j;break;}
+    }
+  }
+  MOIS_SELECTIONNES = premierImpaye>=0 ? [premierImpaye] : [];
+  MONTANT_RECU=MOIS_SELECTIONNES.length*MEMBRE_VALIDATION.montant;
+  VUE_ACTUELLE='validation';
+  afficherVue();
+}
 function vueValidation(){
   var m=MEMBRE_VALIDATION;
   if(!m)return'<div style="text-align:center;padding:40px;color:var(--grisC)">Aucun membre selectionne</div>';
@@ -903,6 +923,8 @@ function vueValidation(){
   var moisDus=m.paiements.map(function(p,i){return(!p&&i<=MC)?i:-1;}).filter(function(i){return i>=0;});
   // Mois futurs non payés
   var moisFuturs=m.paiements.map(function(p,i){return(!p&&i>MC)?i:-1;}).filter(function(i){return i>=0;});
+  // Vérification : aucun mois déjà payé ne doit être dans MOIS_SELECTIONNES
+  MOIS_SELECTIONNES=MOIS_SELECTIONNES.filter(function(i){return !m.paiements[i];});
 
   // Boutons rapides
   var btnsRapides=[
@@ -994,9 +1016,10 @@ function vueValidation(){
 
 function selectionnerTout(){
   var MC=MOIS_COURANT();
+  // Sélectionner uniquement les mois NON payés
   MOIS_SELECTIONNES=MEMBRE_VALIDATION.paiements
-    .map(function(p,i){return(!p)?i:-1;})
-    .filter(function(i){return i>=0 && i<=MC;});
+    .map(function(p,i){return(!p&&i<=MC)?i:-1;})
+    .filter(function(i){return i>=0;});
   MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);
   var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;
   afficherVue();
@@ -1011,8 +1034,8 @@ function selectionnerMoisCourant(){
 }
 
 function selectionnerNMois(n){
-  // Sélectionner les n premiers mois impayés (retards d'abord, puis futurs)
   var MC=MOIS_COURANT();
+  // Uniquement les mois NON payés (retards + futurs)
   var moisDus=MEMBRE_VALIDATION.paiements
     .map(function(p,i){return(!p&&i<=MC)?i:-1;})
     .filter(function(i){return i>=0;});
@@ -1033,7 +1056,16 @@ function deselectionnerTout(){
   afficherVue();
 }
 
-function toggleMoisSelection(idx){var i=MOIS_SELECTIONNES.indexOf(idx);if(i>=0)MOIS_SELECTIONNES.splice(i,1);else MOIS_SELECTIONNES.push(idx);MOIS_SELECTIONNES.sort(function(a,b){return a-b;});var el=document.getElementById('mois-sel-'+idx);if(el){var sel=MOIS_SELECTIONNES.indexOf(idx)>=0,ec=idx===MOIS_COURANT();el.style.background=sel?'var(--vertD)':'#111d2a';el.style.borderColor=sel?'var(--vert)':(ec?'var(--or)':'#2a1a0d');var last=el.querySelector('div:last-child');if(last){last.style.color=sel?'var(--vert)':'#1a3a5a';last.textContent=sel?'&#x2714;':'○';}}MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;majRecap();}
+function toggleMoisSelection(idx){
+  // Bloquer si le mois est déjà payé
+  if(MEMBRE_VALIDATION && MEMBRE_VALIDATION.paiements[idx]===1){
+    notifier('&#x26A0; Ce mois est deja paye !','danger');
+    return;
+  }
+  var i=MOIS_SELECTIONNES.indexOf(idx);
+  if(i>=0)MOIS_SELECTIONNES.splice(i,1);
+  else MOIS_SELECTIONNES.push(idx);
+  MOIS_SELECTIONNES.sort(function(a,b){return a-b;});var el=document.getElementById('mois-sel-'+idx);if(el){var sel=MOIS_SELECTIONNES.indexOf(idx)>=0,ec=idx===MOIS_COURANT();el.style.background=sel?'var(--vertD)':'#111d2a';el.style.borderColor=sel?'var(--vert)':(ec?'var(--or)':'#2a1a0d');var last=el.querySelector('div:last-child');if(last){last.style.color=sel?'var(--vert)':'#1a3a5a';last.textContent=sel?'&#x2714;':'○';}}MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;majRecap();}
 function majRecap(){var m=MEMBRE_VALIDATION;if(!m)return;var total=MOIS_SELECTIONNES.length*m.montant,recu=MONTANT_RECU;var recap=document.getElementById('recap-content'),ligne=document.getElementById('recap-ligne');if(ligne)ligne.innerHTML='<div style="display:flex;justify-content:space-between"><span style="color:var(--grisC)">Attendu :</span><span style="color:var(--or);font-weight:700">'+fmt(total)+'</span></div>'+'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--grisC)">Reçu :</span><span style="color:'+(recu>=total?'var(--vert)':'var(--rouge)')+';font-weight:700">'+fmt(recu)+'</span></div>'+(recu<total&&recu>0?'<div style="background:var(--orD);border:1px solid rgba(255,179,71,0.3);border-radius:8px;padding:7px 12px;margin-top:8px;color:var(--or);font-size:11px">&#x26A0; Reste '+fmt(total-recu)+'</div>':'');if(recap)recap.innerHTML='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Membre</span><span style="font-weight:600">'+m.nom+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Mois</span><span style="color:var(--vert);font-weight:600">'+MOIS_SELECTIONNES.length+' mois</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Périodes</span><span style="font-size:11px;color:var(--blanc)">'+MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ')+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:10px 0 0"><span style="color:var(--grisC);font-weight:700">TOTAL</span><span style="color:var(--vert);font-weight:900;font-size:18px">'+fmt(total)+'</span></div>';var btn=document.getElementById('btn-confirmer');if(btn){btn.disabled=MOIS_SELECTIONNES.length===0;btn.style.opacity=MOIS_SELECTIONNES.length===0?'0.4':'1';}}
 function confirmerValidation(){var m=MEMBRE_VALIDATION;if(!m||!MOIS_SELECTIONNES.length)return;var moisStr=MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ');journaliser('PAIEMENT VALIDÉ',m.nom+' – '+moisStr+' – '+fmt(MOIS_SELECTIONNES.length*m.montant));var now=new Date();MOIS_SELECTIONNES.forEach(function(idx){var mb=MEMBRES.find(function(x){return x.id===m.id;});if(mb)mb.paiements[idx]=1;});sauvegarder();sauvegarderCloud();RECU_COURANT={id:'REC-'+now.getTime(),membre:Object.assign({},m),moisPayes:MOIS_SELECTIONNES.slice(),montantTotal:MOIS_SELECTIONNES.length*m.montant,montantRecu:MONTANT_RECU,date:now.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),heure:now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};VUE_ACTUELLE='recu';afficherVue();}
 
