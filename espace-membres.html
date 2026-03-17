@@ -719,71 +719,59 @@ function vueClassement() {
     var payes = m.paiements.filter(function(p,i){ return p&&i<=MC; }).length;
     var total = MC + 1;
     var taux  = total > 0 ? Math.round(payes/total*100) : 0;
-    return { m: m, payes: payes, total: total, taux: taux, verse: payes*m.montant };
+    // Anonymiser : initiales seulement sauf pour le membre connecté
+    var estMoi = MEMBRE_CONNECTE && m.id===MEMBRE_CONNECTE.id;
+    var affichageNom = estMoi ? m.nom : anonymiserNom(m.nom);
+    return { m: m, payes: payes, total: total, taux: taux, verse: payes*m.montant, affichageNom: affichageNom, estMoi: estMoi };
   });
   scores.sort(function(a,b){ return b.taux-a.taux || b.verse-a.verse; });
 
   var monRang = MEMBRE_CONNECTE ? scores.findIndex(function(s){ return s.m.id===MEMBRE_CONNECTE.id; }) : -1;
-
-  var medalles = ['🥇','🥈','🥉'];
+  var medalles = ['&#x1F947;','&#x1F948;','&#x1F949;'];
 
   var lignes = scores.map(function(sc,idx){
-    var estMoi = MEMBRE_CONNECTE && sc.m.id===MEMBRE_CONNECTE.id;
-    var s = statutMembre(sc.m);
-    var bg = estMoi ? 'background:rgba(100,212,255,0.08);border-color:rgba(100,212,255,0.3);' : '';
-    return '<div id="rang-'+sc.m.id+'" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);margin-bottom:6px;'+bg+'">'
+    var bg = sc.estMoi ? 'background:rgba(100,212,255,0.08);border-color:rgba(100,212,255,0.3);' : '';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);margin-bottom:6px;'+bg+'">'
       +'<div style="font-size:'+(idx<3?'20px':'13px')+';min-width:28px;text-align:center;font-weight:900;color:var(--grisT)">'+(idx<3?medalles[idx]:(idx+1)+'e')+'</div>'
       +'<div style="flex:1;min-width:0">'
-        +'<div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
-          +sc.m.nom+(estMoi?' <span style="background:var(--bleuD);color:var(--bleu);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700">VOUS</span>':'')
+        +'<div style="font-weight:700;font-size:13px;">'
+          +sc.affichageNom
+          +(sc.estMoi?' <span style="background:var(--bleuD);color:var(--bleu);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700">VOUS</span>':'')
         +'</div>'
-        +'<div style="color:var(--grisC);font-size:10px;margin-top:2px">'+sc.m.id+' · '+sc.payes+'/'+sc.total+' mois</div>'
+        +'<div style="color:var(--grisC);font-size:10px;margin-top:2px">'+(sc.estMoi?sc.m.id+' · ':'')+sc.payes+'/'+sc.total+' mois</div>'
       +'</div>'
       +'<div style="text-align:right;flex-shrink:0">'
         +'<div style="color:'+(sc.taux>=100?'var(--vert)':sc.taux>=60?'var(--or)':'var(--rouge)')+';font-weight:900;font-size:16px">'+sc.taux+'%</div>'
-        +'<div style="color:var(--grisC);font-size:10px">'+fmt(sc.verse)+'</div>'
+        +(sc.estMoi?'<div style="color:var(--grisC);font-size:10px">'+fmt(sc.verse)+'</div>':'')
       +'</div>'
     +'</div>';
   }).join('');
 
   return [
     '<div class="card-bleu">',
-      '<div style="color:var(--bleu);font-weight:800;font-size:15px;margin-bottom:4px">🏆 Classement des membres</div>',
+      '<div style="color:var(--bleu);font-weight:800;font-size:15px;margin-bottom:4px">&#x1F3C6; Classement</div>',
       '<div style="color:var(--grisC);font-size:12px">'+CFG.nom_eglise+' · '+MEMBRES.length+' membres · Mois '+(MC+1)+'/'+CFG.nb_mois+'</div>',
       monRang>=0 ? '<div style="margin-top:10px;background:rgba(100,212,255,0.08);border:1px solid rgba(100,212,255,0.2);border-radius:10px;padding:10px 14px;color:var(--bleu);font-size:12px">Votre rang : <b style="font-size:16px">'+(monRang+1)+'e</b> sur '+MEMBRES.length+'</div>' : '',
+      '<div style="margin-top:8px;font-size:10px;color:var(--grisT);font-style:italic">&#x1F512; Les noms des autres membres sont anonymises</div>',
     '</div>',
-    '<input id="search-classement" type="text" placeholder="🔍 Rechercher un membre..." style="margin-bottom:10px"/>',
-    '<div id="liste-classement">'+lignes+'</div>',
+    '<div id="liste-classement" style="margin-top:10px">'+lignes+'</div>',
   ].join('');
 }
 
-function filtrerClassement() {
-  var q = (document.getElementById('search-classement')||{value:''}).value.toLowerCase();
-  var MC = MOIS_COURANT();
-  var scores = MEMBRES.map(function(m){
-    var payes = m.paiements.filter(function(p,i){ return p&&i<=MC; }).length;
-    var total = MC+1; var taux = total>0?Math.round(payes/total*100):0;
-    return {m:m,payes:payes,total:total,taux:taux,verse:payes*m.montant};
-  }).filter(function(sc){ return sc.m.nom.toLowerCase().includes(q)||sc.m.id.toLowerCase().includes(q); });
-  scores.sort(function(a,b){ return b.taux-a.taux||b.verse-a.verse; });
-
-  var medalles=['🥇','🥈','🥉'];
-  var el = document.getElementById('liste-classement');
-  if (!el) return;
-  el.innerHTML = scores.map(function(sc,idx){
-    var estMoi = MEMBRE_CONNECTE&&sc.m.id===MEMBRE_CONNECTE.id;
-    var bg = estMoi?'background:rgba(100,212,255,0.08);border-color:rgba(100,212,255,0.3);':'';
-    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);margin-bottom:6px;'+bg+'">'
-      +'<div style="font-size:'+(idx<3?'20px':'13px')+';min-width:28px;text-align:center;font-weight:900;color:var(--grisT)">'+(idx<3?medalles[idx]:(idx+1)+'e')+'</div>'
-      +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">'+sc.m.nom+(estMoi?' <span style="background:var(--bleuD);color:var(--bleu);border-radius:4px;padding:1px 6px;font-size:9px">VOUS</span>':'')+'</div><div style="color:var(--grisC);font-size:10px">'+sc.payes+'/'+sc.total+' mois</div></div>'
-      +'<div style="text-align:right"><div style="color:'+(sc.taux>=100?'var(--vert)':sc.taux>=60?'var(--or)':'var(--rouge)')+';font-weight:900;font-size:16px">'+sc.taux+'%</div><div style="color:var(--grisC);font-size:10px">'+fmt(sc.verse)+'</div></div>'
-    +'</div>';
-  }).join('');
+function anonymiserNom(nom) {
+  // Afficher seulement les initiales : "Jean-Pierre KOUASSI" -> "J-P. K***"
+  var parties = nom.trim().split(' ');
+  return parties.map(function(p, i) {
+    if (!p) return '';
+    if (i === parties.length - 1 && parties.length > 1) {
+      // Dernier mot (nom de famille) : première lettre + ***
+      return p[0].toUpperCase() + '***';
+    }
+    // Prénoms : initiale seulement
+    return p[0].toUpperCase() + '.';
+  }).join(' ');
 }
 
-// ══════════════════════════════════════════════════════════
-// VUE : TABLEAU DE BORD GLOBAL
-// ══════════════════════════════════════════════════════════
 function vueGlobal() {
   var MC = MOIS_COURANT();
   var aJour   = MEMBRES.filter(function(m){ return statutMembre(m)==='ajour'; }).length;
