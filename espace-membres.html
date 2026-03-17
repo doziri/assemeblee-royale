@@ -215,6 +215,12 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
 @media print{body>*:not(#print-zone){display:none!important}#print-zone{display:block!important}@page{margin:10mm;size:A4}}
 #print-zone{display:none}
 </style>
+<meta name="theme-color" content="#07101a"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ARR Membres"/>
+<link rel="manifest" href="manifest-membres.json"/>
 </head>
 <body>
 
@@ -994,6 +1000,11 @@ function imprimerMaCarte() {
 // ══════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
 document.addEventListener('DOMContentLoaded', function() {
   // Navigation
   ['mondossier','calendrier','classement','global','macarte'].forEach(function(v){

@@ -132,6 +132,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 @keyframes rotate{to{transform:rotate(360deg)}}
 .spin{display:inline-block;animation:rotate 1s linear infinite}
 </style>
+<!-- PWA Meta Tags -->
+<meta name="theme-color" content="#07101a"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ARR Cotisations"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a1628'/><text y='.9em' font-size='90'>⛪</text></svg>"/>
 </head>
 <body>
 
@@ -203,6 +211,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <button class="nav-btn" id="nav-dashboard">📊 Dashboard</button>
     <button class="nav-btn" id="nav-scanner">📷 Scanner</button>
     <button class="nav-btn" id="nav-cartes">📇 Cartes QR</button>
+    <button class="nav-btn" id="nav-stats">📈 Statistiques</button>
     <button class="nav-btn" id="nav-sauvegarde">💾 Données</button>
     <button class="nav-btn" id="nav-parametres">⚙️ Paramètres</button>
     <button class="nav-btn" id="nav-admin" style="display:none">🛡 Admin</button>
@@ -543,7 +552,13 @@ var FILTRE_STATUT='tous';
 function fmt(v){return new Intl.NumberFormat('fr-FR').format(v)+' F';}
 function initiales(n){return n.split(' ').map(function(x){return x[0];}).join('').slice(0,2).toUpperCase();}
 function genId(i){return 'MBR-'+String(i).padStart(3,'0');}
-function statutMembre(m){var p=m.paiements.slice(0,MOIS_COURANT()+1).reduce(function(a,b){return a+b;},0);if(p===MOIS_COURANT()+1)return 'ajour';if(p===0)return 'inactif';return 'retard';}
+function statutMembre(m){
+  var MC=MOIS_COURANT();
+  var payes=m.paiements.slice(0,MC+1).filter(function(p){return p&&p!==0;}).length;
+  if(payes===MC+1)return 'ajour';
+  if(payes===0)return 'inactif';
+  return 'retard';
+}
 function badgeHTML(s){var l={ajour:'&#x2714; À jour',retard:'&#x26A0; Retard',inactif:'&#x2717; Inactif'};return '<span class="badge badge-'+s+'">'+l[s]+'</span>';}
 function avatarHTML(nom,s){var bg={ajour:'var(--vertD)',retard:'var(--orD)',inactif:'var(--rougeD)'},c={ajour:'var(--vert)',retard:'var(--or)',inactif:'var(--rouge)'};return '<div class="membre-avatar" style="background:'+bg[s]+';color:'+c[s]+'">'+initiales(nom)+'</div>';}
 function notifier(msg,type){type=type||'success';var n=document.getElementById('notif');n.textContent=msg;n.style.display='block';n.style.background=type==='danger'?'var(--rougeD)':'var(--vertD)';n.style.color=type==='danger'?'var(--rouge)':'var(--vert)';n.style.border='1px solid '+(type==='danger'?'rgba(255,107,107,0.3)':'rgba(78,255,155,0.3)');setTimeout(function(){n.style.display='none';},3000);}
@@ -555,7 +570,7 @@ function journaliser(action,detail){try{var j=JSON.parse(localStorage.getItem('t
 function changerVue(vue){
   if(vue==='admin'&&ROLE_ACTUEL!=='admin'){notifier('&#x26D4; Accès réservé à l\'administrateur','danger');return;}
   VUE_ACTUELLE=vue;
-  ['membres','dashboard','scanner','cartes','sauvegarde','parametres','admin'].forEach(function(v){var el=document.getElementById('nav-'+v);if(el)el.classList.toggle('active',v===vue);});
+  ['membres','dashboard','stats','scanner','cartes','sauvegarde','parametres','admin'].forEach(function(v){var el=document.getElementById('nav-'+v);if(el)el.classList.toggle('active',v===vue);});
   document.getElementById('btn-add-top').style.display=vue==='membres'?'inline-flex':'none';
   afficherVue();
 }
@@ -563,7 +578,7 @@ function afficherVue(){
   mettreAJourHeader();
   var c=document.getElementById('content');c.innerHTML='';
   var div=document.createElement('div');div.className='anim-up';
-  var map={membres:vueMembers,dashboard:vueDashboard,scanner:vueScanner,cartes:vueCartes,sauvegarde:vueSauvegarde,parametres:vueParametres,admin:vueAdmin,formulaire:vueFormulaire,validation:vueValidation,recu:vueRecu};
+  var map={membres:vueMembers,dashboard:vueDashboard,stats:vueStats,rappels:vueRappels,historique:vueHistoriqueConnexions,scanner:vueScanner,cartes:vueCartes,sauvegarde:vueSauvegarde,parametres:vueParametres,admin:vueAdmin,formulaire:vueFormulaire,validation:vueValidation,recu:vueRecu};
   div.innerHTML=(map[VUE_ACTUELLE]||vueMembers)();
   c.appendChild(div);
   attacherEvents();
@@ -870,13 +885,13 @@ function filtrerScanner(q){var f=MEMBRES.filter(function(m){return m.nom.toLower
 function validerCodeManuel(){var code=document.getElementById('code-manuel')?document.getElementById('code-manuel').value.trim():'';var errEl=document.getElementById('code-err');var m=MEMBRES.find(function(x){return x.id===code;});if(!m){errEl.textContent='&#x26A0; Code introuvable.';errEl.style.display='block';return;}ouvrirValidation(m.id);}
 
 // VUE MEMBRES
-function vueMembers(){if(!MEMBRES.length)return['<div class="empty-state">','<div style="font-size:56px;margin-bottom:16px">&#x1F465;</div>','<div style="font-weight:800;font-size:18px;margin-bottom:10px">Aucun membre enregistré</div>','<button class="btn btn-primary btn-full" onclick="ouvrirFormulaire()" style="max-width:280px">&#x2795; Ajouter le premier membre</button>','</div>'].join('');var filtresBtns=['tous','ajour','retard','inactif'].map(function(f){var labels={tous:'Tous',ajour:'&#x2714; À jour',retard:'&#x26A0; Retard',inactif:'&#x2717; Inactifs'};return'<button id="filtre-'+f+'" onclick="filtrerParStatut(\''+f+'\')" class="btn '+(f===FILTRE_STATUT?'btn-primary':'btn-ghost')+'" style="padding:7px 12px;font-size:11px;white-space:nowrap">'+labels[f]+'</button>';}).join('');return['<input id="search-input" type="text" placeholder="&#x1F50D; Nom ou code..." style="margin-bottom:10px"/>','<div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:4px">'+filtresBtns+'</div>','<div id="filtre-count" style="color:var(--grisT);font-size:12px;margin-bottom:10px">'+MEMBRES.length+' membres</div>','<div id="liste-membres">'+renderListeMembres(MEMBRES)+'</div>','<div style="margin-top:16px"><button class="btn btn-primary btn-full" onclick="ouvrirFormulaire()">&#x2795; Ajouter un autre membre</button></div>'].join('');}
+function vueMembers(){if(!MEMBRES.length)return['<div class="empty-state">','<div style="font-size:56px;margin-bottom:16px">&#x1F465;</div>','<div style="font-weight:800;font-size:18px;margin-bottom:10px">Aucun membre enregistré</div>','<button class="btn btn-primary btn-full" onclick="ouvrirFormulaire()" style="max-width:280px">&#x2795; Ajouter le premier membre</button>','</div>'].join('');var filtresBtns=['tous','ajour','retard','inactif'].map(function(f){var labels={tous:'Tous',ajour:'&#x2714; À jour',retard:'&#x26A0; Retard',inactif:'&#x2717; Inactifs'};return'<button id="filtre-'+f+'" onclick="filtrerParStatut(\''+f+'\')" class="btn '+(f===FILTRE_STATUT?'btn-primary':'btn-ghost')+'" style="padding:7px 12px;font-size:11px;white-space:nowrap">'+labels[f]+'</button>';}).join('');return['<input id="search-input" type="text" placeholder="&#x1F50D; Nom ou code..." style="margin-bottom:10px"/>','<div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:4px">'+filtresBtns+'</div>','<div id="filtre-count" style="color:var(--grisT);font-size:12px;margin-bottom:10px">'+MEMBRES.length+' membres</div>','<div id="liste-membres">'+renderListeMembres(MEMBRES)+'</div>','<div style="margin-top:16px;display:flex;gap:10px"><button class="btn btn-primary" style="flex:1" onclick="ouvrirFormulaire()">&#x2795; Ajouter</button><button class="btn btn-or" style="flex:1" onclick="genererRappelsWhatsApp()">&#x1F514; Rappels WhatsApp</button></div>'].join('');}
 function filtrerParStatut(f){FILTRE_STATUT=f;['tous','ajour','retard','inactif'].forEach(function(s){var b=document.getElementById('filtre-'+s);if(b){b.className='btn '+(s===f?'btn-primary':'btn-ghost');b.style.cssText='padding:7px 12px;font-size:11px;white-space:nowrap';}});filtrerMembres();}
 function filtrerMembres(){var q=(document.getElementById('search-input')?document.getElementById('search-input').value:'').toLowerCase();var filtered=MEMBRES.filter(function(m){return(m.nom.toLowerCase().indexOf(q)>=0||m.id.indexOf(q.toUpperCase())>=0)&&(FILTRE_STATUT==='tous'||statutMembre(m)===FILTRE_STATUT);});var el=document.getElementById('liste-membres');if(el)el.innerHTML=renderListeMembres(filtered);var cnt=document.getElementById('filtre-count');if(cnt)cnt.textContent=filtered.length+' membre'+(filtered.length!==1?'s':'')+' affiché'+(filtered.length!==1?'s':'');}
 function renderListeMembres(liste){if(!liste.length)return'<div style="text-align:center;color:var(--grisC);padding:32px;font-size:13px">Aucun membre trouvé</div>';return liste.map(function(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p,i){return p&&i<=MOIS_COURANT();}).length;var manq=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;var dette=manq*m.montant,exp=MEMBRES_EXPANDED[m.id];var cal='';if(exp){cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var cls=p?'cal-paye':ec?'cal-encours':pas?'cal-impaye':'cal-futur';var lbl=MOIS_NOMS[idx%12].slice(0,1)+(CFG.annee_debut+Math.floor((CFG.mois_debut+idx)/12)).toString().slice(2);return'<div class="cal-cell '+cls+'" title="'+TOUS_MOIS()[idx]+'" onclick="togglePaiement(\''+m.id+'\','+idx+')">'+'<span class="cal-cell-label">'+lbl+'</span>'+'<span class="cal-cell-check">'+(p?'&#x2714;':pas?'&#x2717;':'·')+'</span></div>';}).join('');}
   return['<div class="membre-card" id="card-'+m.id+'">','<div class="membre-header" onclick="toggleMembre(\''+m.id+'\')">',avatarHTML(m.nom,s),'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nom+'</div><div style="font-size:11px;color:var(--grisC);margin-top:2px">'+m.id+' · '+fmt(m.montant)+'/mois'+(dette>0?' · <span style="color:var(--or)">dette: '+fmt(dette)+'</span>':'')+'</div></div>','<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">',badgeHTML(s),'<span style="color:var(--grisC);font-size:18px">'+(exp?'&#8964;':'&rsaquo;')+'</span>','</div>','</div>',exp?['<div class="membre-detail">','<div class="grid-3" style="margin:12px 0">',[['Payés',payes+'/'+(MOIS_COURANT()+1),'var(--vert)'],['Manquants',manq,'var(--or)'],['Versé',fmt(payes*m.montant),'var(--bleu)']].map(function(x){return'<div style="background:#111d2a;border-radius:10px;padding:10px;text-align:center"><div style="color:var(--grisC);font-size:9px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:800;font-size:14px;margin-top:4px">'+x[1]+'</div></div>';}).join(''),'</div>','<div style="color:var(--grisC);font-size:10px;font-weight:700;margin-bottom:8px">CALENDRIER</div>','<div style="display:flex;flex-wrap:wrap;gap:3px">'+cal+'</div>','<div class="sep"></div>','<div style="display:flex;gap:8px;flex-wrap:wrap">','<button class="btn btn-bleu" style="font-size:12px;padding:7px 12px" onclick="ouvrirFormulaire(\''+m.id+'\')">&#x270F; Modifier</button>','<button class="btn btn-primary" style="font-size:12px;padding:7px 12px" onclick="ouvrirValidation(\''+m.id+'\')">&#x2705; Valider paiement</button>','<button class="btn btn-or" style="font-size:12px;padding:7px 12px" onclick="imprimerCarte(\''+m.id+'\')">&#x1F5A8; Imprimer</button>','<button class="btn btn-danger" style="font-size:12px;padding:7px 12px" onclick="demanderSuppression(\''+m.id+'\')">&#x1F5D1; Supprimer</button>',(m.tel?'<a href="https://wa.me/'+m.tel.replace(/\D/g,'')+'" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:7px 12px;text-decoration:none">&#x1F4F2; WhatsApp</a>':''),'</div>','</div>'].join(''):'',' </div>'].join('');}).join('');}
 function toggleMembre(id){MEMBRES_EXPANDED[id]=!MEMBRES_EXPANDED[id];filtrerMembres();}
-function togglePaiement(id,idx){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;m.paiements[idx]=m.paiements[idx]?0:1;sauvegarder();sauvegarderCloud(true);mettreAJourHeader();filtrerMembres();}
+function togglePaiement(id,idx){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;m.paiements[idx]=m.paiements[idx]?0:Date.now();sauvegarder();sauvegarderCloud(true);mettreAJourHeader();filtrerMembres();}
 
 // FORMULAIRE
 function ouvrirFormulaire(id){MEMBRE_EDIT_ID=id||null;if(id){var m=MEMBRES.find(function(x){return x.id===id;});if(m)FORM_MONTANT=m.montant;}else{FORM_MONTANT=2000;FORM_MOIS_DEBUT=0;}VUE_ACTUELLE='formulaire';afficherVue();}
@@ -890,6 +905,418 @@ function fermerModal(){document.getElementById('modal-overlay').style.display='n
 function confirmerSuppression(){if(!MEMBRE_SUPPR_ID)return;var m=MEMBRES.find(function(x){return x.id===MEMBRE_SUPPR_ID;});MEMBRES=MEMBRES.filter(function(x){return x.id!==MEMBRE_SUPPR_ID;}).map(function(x,i){return Object.assign({},x,{id:genId(i+1)});});sauvegarder();sauvegarderCloud();fermerModal();notifier('&#x1F5D1; '+(m?m.nom:'?')+' supprimé','danger');journaliser('MEMBRE SUPPRIMÉ',(m?m.nom:'?')+' ('+MEMBRE_SUPPR_ID+')');changerVue('membres');}
 
 // DASHBOARD
+
+
+function exporterRapportPDF() {
+  var MC = MOIS_COURANT();
+  var tousMois = TOUS_MOIS();
+  var now = new Date();
+  var dateRapport = now.toLocaleDateString('fr-FR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  // Calculs statistiques
+  var totalGlobal = MEMBRES.reduce(function(s,m){
+    return s + m.paiements.filter(function(p,i){return p&&i<=MC;}).length * m.montant;
+  }, 0);
+  var totalAttendu = MEMBRES.reduce(function(s,m){ return s+m.montant*(MC+1); }, 0);
+  var tauxGlobal = totalAttendu>0 ? Math.round(totalGlobal/totalAttendu*100) : 0;
+  var aJour = MEMBRES.filter(function(m){return statutMembre(m)==='ajour';}).length;
+  var retard = MEMBRES.filter(function(m){return statutMembre(m)==='retard';}).length;
+  var inactif = MEMBRES.filter(function(m){return statutMembre(m)==='inactif';}).length;
+
+  // Encaissements par mois projet
+  var encParMois = tousMois.map(function(label, idx) {
+    var total = MEMBRES.reduce(function(s,m){ return s+(m.paiements[idx]?m.montant:0); }, 0);
+    var nb = MEMBRES.filter(function(m){ return m.paiements[idx]; }).length;
+    return {label:label, total:total, nb:nb};
+  }).slice(0, MC+1);
+
+  var topMois = encParMois.slice().sort(function(a,b){return b.total-a.total;}).slice(0,5);
+  var flopMois = encParMois.filter(function(m){return m.total>0;}).sort(function(a,b){return a.total-b.total;}).slice(0,3);
+  var moisZero = encParMois.filter(function(m){return m.total===0;});
+
+  // Commentaires automatiques
+  var commentaires = [];
+  if(tauxGlobal>=80) commentaires.push('&#x2705; Excellente performance globale avec un taux de collecte de '+tauxGlobal+'%. Le projet avance bien.');
+  else if(tauxGlobal>=60) commentaires.push('&#x26A0; Performance satisfaisante mais des efforts sont nécessaires pour atteindre les objectifs. Taux actuel : '+tauxGlobal+'%.');
+  else commentaires.push('&#x274C; Taux de collecte insuffisant ('+tauxGlobal+'%). Une mobilisation urgente des membres est recommandée.');
+
+  if(aJour===MEMBRES.length) commentaires.push('&#x1F3C6; Tous les membres sont à jour dans leurs cotisations. Félicitations !');
+  else if(retard>0) commentaires.push('&#x26A0; '+retard+' membre(s) en retard de paiement. Un suivi individuel est recommandé.');
+  if(inactif>0) commentaires.push('&#x1F4DE; '+inactif+' membre(s) inactif(s). Contacter ces membres pour comprendre leur situation.');
+
+  if(topMois.length>0) commentaires.push('&#x1F4C8; Meilleur mois de collecte : <b>'+topMois[0].label+'</b> avec '+fmt(topMois[0].total)+' encaissés ('+topMois[0].nb+' membres).');
+  if(moisZero.length>0) commentaires.push('&#x1F4C9; '+moisZero.length+' mois sans aucun encaissement : '+moisZero.map(function(m){return m.label;}).join(', ')+'.');
+
+  var projetTotalObjectif = MEMBRES.reduce(function(s,m){return s+m.montant*CFG.nb_mois;}, 0);
+  var resteAEncaisser = projetTotalObjectif - totalGlobal;
+  commentaires.push('&#x1F4CA; Objectif total du projet : '+fmt(projetTotalObjectif)+'. Déjà encaissé : '+fmt(totalGlobal)+'. Reste à collecter : <b>'+fmt(resteAEncaisser)+'</b>.');
+
+  // Tableau détaillé par mois
+  var tableauMois = encParMois.slice().reverse().map(function(m) {
+    var taux = MEMBRES.length>0 ? Math.round(m.nb/MEMBRES.length*100) : 0;
+    var couleur = taux>=80?'#0d5c3a':taux>=50?'#5c3a0d':'#5c0d0d';
+    var couleurTxt = taux>=80?'#4eff9b':taux>=50?'#ffb347':'#ff6b6b';
+    return '<tr>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;font-weight:500">'+m.label+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:center">'+m.nb+'/'+MEMBRES.length+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:right;font-weight:700;color:#1a5c3a">'+fmt(m.total)+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:center"><span style="background:'+couleur+';color:'+couleurTxt+';padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+taux+'%</span></td>'
+    +'</tr>';
+  }).join('');
+
+  // Tableau membres
+  var tableauMembres = MEMBRES.map(function(m) {
+    var s = statutMembre(m);
+    var payes = m.paiements.filter(function(p,i){return p&&i<=MC;}).length;
+    var manq = m.paiements.filter(function(p,i){return !p&&i<=MC;}).length;
+    var dette = manq*m.montant;
+    var couleurStatut = s==='ajour'?'#0d5c3a':s==='retard'?'#5c3a0d':'#5c0d0d';
+    var txtStatut = s==='ajour'?'#4eff9b':s==='retard'?'#ffb347':'#ff6b6b';
+    var labelStatut = s==='ajour'?'À jour':s==='retard'?'Retard':'Inactif';
+    return '<tr>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;font-weight:500">'+m.nom+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;color:#666">'+m.id+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:right">'+fmt(m.montant)+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:center">'+payes+'/'+(MC+1)+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:right;color:'+(dette>0?'#cc3300':'#1a5c3a')+';font-weight:700">'+(dette>0?fmt(dette):'—')+'</td>'
+      +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:center"><span style="background:'+couleurStatut+';color:'+txtStatut+';padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+labelStatut+'</span></td>'
+    +'</tr>';
+  }).join('');
+
+  // Logo
+  var logoHtml = LOGO_DATA
+    ? '<img src="'+LOGO_DATA+'" style="height:70px;object-fit:contain;border-radius:8px;" alt="Logo"/>'
+    : '<div style="width:70px;height:70px;background:#0a1628;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:32px;">&#x26EA;</div>';
+
+  // HTML du rapport
+  var html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>'
+    +'<title>Rapport - '+CFG.nom_eglise+'</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:Arial,Helvetica,sans-serif;color:#1a1a2e;background:#fff;font-size:13px}'
+    +'.page{max-width:210mm;margin:0 auto;padding:15mm}'
+    +'.header{display:flex;align-items:center;gap:20px;padding-bottom:16px;border-bottom:3px solid #0a1628;margin-bottom:24px}'
+    +'.header-info h1{font-size:22px;color:#0a1628;font-weight:900}'
+    +'.header-info h2{font-size:14px;color:#666;font-weight:400;margin-top:4px}'
+    +'.header-info .date{font-size:11px;color:#999;margin-top:6px}'
+    +'.section{margin-bottom:24px}'
+    +'.section-title{font-size:14px;font-weight:900;color:#0a1628;border-left:4px solid #4eff9b;padding-left:10px;margin-bottom:14px;text-transform:uppercase;letter-spacing:1px}'
+    +'.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}'
+    +'.stat-box{background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;padding:14px;text-align:center}'
+    +'.stat-box .val{font-size:22px;font-weight:900;color:#0a1628}'
+    +'.stat-box .lbl{font-size:10px;color:#666;text-transform:uppercase;margin-top:4px}'
+    +'.comment-box{background:#f0f7ff;border-left:4px solid #0a1628;border-radius:4px;padding:10px 14px;margin-bottom:8px;font-size:12px;line-height:1.6}'
+    +'table{width:100%;border-collapse:collapse;font-size:12px}'
+    +'thead tr{background:#0a1628;color:#fff}'
+    +'thead th{padding:10px 12px;text-align:left;font-weight:700}'
+    +'tbody tr:nth-child(even){background:#f8f9fa}'
+    +'.top-badge{background:#0d5c3a;color:#4eff9b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}'
+    +'.footer{margin-top:32px;padding-top:16px;border-top:1px solid #e0e0e0;text-align:center;color:#999;font-size:10px}'
+    +'@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+    +'</style></head><body><div class="page">'
+
+    // EN-TÊTE
+    +'<div class="header">'
+      +logoHtml
+      +'<div class="header-info">'
+        +'<h1>'+CFG.nom_eglise+'</h1>'
+        +'<h2>'+CFG.nom_projet+'</h2>'
+        +'<div class="date">Rapport généré le '+dateRapport+'</div>'
+        +'<div class="date">Période : '+tousMois[0]+' → '+tousMois[MC]+' ('+( MC+1)+' mois)</div>'
+      +'</div>'
+    +'</div>'
+
+    // RÉSUMÉ EXÉCUTIF
+    +'<div class="section">'
+      +'<div class="section-title">Résumé exécutif</div>'
+      +'<div class="stats-grid">'
+        +'<div class="stat-box"><div class="val">'+fmt(totalGlobal)+'</div><div class="lbl">Total encaissé</div></div>'
+        +'<div class="stat-box"><div class="val">'+tauxGlobal+'%</div><div class="lbl">Taux de collecte</div></div>'
+        +'<div class="stat-box"><div class="val">'+MEMBRES.length+'</div><div class="lbl">Membres</div></div>'
+        +'<div class="stat-box"><div class="val">'+aJour+'</div><div class="lbl">À jour</div></div>'
+        +'<div class="stat-box"><div class="val">'+retard+'</div><div class="lbl">En retard</div></div>'
+        +'<div class="stat-box"><div class="val">'+inactif+'</div><div class="lbl">Inactifs</div></div>'
+        +'<div class="stat-box"><div class="val">'+fmt(resteAEncaisser)+'</div><div class="lbl">Reste à collecter</div></div>'
+        +'<div class="stat-box"><div class="val">'+fmt(projetTotalObjectif)+'</div><div class="lbl">Objectif total</div></div>'
+      +'</div>'
+    +'</div>'
+
+    // COMMENTAIRES
+    +'<div class="section">'
+      +'<div class="section-title">Analyse et commentaires</div>'
+      +commentaires.map(function(c){ return '<div class="comment-box">'+c+'</div>'; }).join('')
+    +'</div>'
+
+    // TOP MOIS
+    +'<div class="section">'
+      +'<div class="section-title">Top 5 mois les mieux encaissés</div>'
+      +'<table><thead><tr><th>#</th><th>Mois</th><th>Membres payeurs</th><th>Montant encaissé</th><th>Taux</th></tr></thead><tbody>'
+      +topMois.map(function(m,i){
+        var taux=MEMBRES.length>0?Math.round(m.nb/MEMBRES.length*100):0;
+        return '<tr>'
+          +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:center"><span class="top-badge">'+(i+1)+'</span></td>'
+          +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;font-weight:700">'+m.label+'</td>'
+          +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:center">'+m.nb+'/'+MEMBRES.length+'</td>'
+          +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:right;font-weight:700;color:#1a5c3a">'+fmt(m.total)+'</td>'
+          +'<td style="padding:8px 12px;border-bottom:1px solid #e0e0e0;text-align:center">'+taux+'%</td>'
+        +'</tr>';
+      }).join('')
+      +'</tbody></table>'
+    +'</div>'
+
+    // TABLEAU MENSUEL
+    +'<div class="section">'
+      +'<div class="section-title">Détail des encaissements par mois</div>'
+      +'<table><thead><tr><th>Mois</th><th style="text-align:center">Membres payeurs</th><th style="text-align:right">Montant encaissé</th><th style="text-align:center">Taux</th></tr></thead>'
+      +'<tbody>'+tableauMois+'</tbody></table>'
+    +'</div>'
+
+    // TABLEAU MEMBRES
+    +'<div class="section">'
+      +'<div class="section-title">Situation individuelle des membres</div>'
+      +'<table><thead><tr><th>Nom</th><th>Code</th><th style="text-align:right">Cotisation</th><th style="text-align:center">Mois payés</th><th style="text-align:right">Solde dû</th><th style="text-align:center">Statut</th></tr></thead>'
+      +'<tbody>'+tableauMembres+'</tbody></table>'
+    +'</div>'
+
+    // FOOTER
+    +'<div class="footer">'
+      +CFG.nom_eglise+' — '+CFG.nom_projet+' — Rapport généré le '+dateRapport
+      +'<br/>Document confidentiel — Usage interne uniquement'
+    +'</div>'
+
+    +'</div></body></html>';
+
+  // Ouvrir dans nouvelle fenêtre et imprimer en PDF
+  var win = window.open('', '_blank');
+  if (!win) {
+    notifier('&#x26A0; Autorisez les popups pour exporter le PDF', 'danger');
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  win.onload = function() {
+    setTimeout(function() { win.print(); }, 500);
+  };
+}
+
+function vueStats() {
+  var MC = MOIS_COURANT();
+  var tousMois = TOUS_MOIS();
+
+  // ── Encaissements par mois de cotisation ──
+  // Pour chaque mois du projet, calculer combien a été encaissé
+  var encParMoisProjet = tousMois.map(function(label, idx) {
+    var total = MEMBRES.reduce(function(s, m) {
+      return s + (m.paiements[idx] ? m.montant : 0);
+    }, 0);
+    return { label: label, total: total, nb: MEMBRES.filter(function(m){ return m.paiements[idx]; }).length };
+  }).slice(0, MC+1); // Seulement les mois passés
+
+  // ── Encaissements par mois calendaire (date réelle de paiement) ──
+  // Grouper les paiements par mois/année réel où ils ont été validés
+  var encParDateReelle = {};
+  MEMBRES.forEach(function(m) {
+    m.paiements.forEach(function(p, idx) {
+      if (p && p > 1000) { // C'est un timestamp
+        var date = new Date(p);
+        var key = (date.getMonth()+1).toString().padStart(2,'0') + '/' + date.getFullYear();
+        if (!encParDateReelle[key]) encParDateReelle[key] = { label: key, total: 0, nb: 0 };
+        encParDateReelle[key].total += m.montant;
+        encParDateReelle[key].nb++;
+      }
+    });
+  });
+
+  // Trier par date
+  var datesReelles = Object.values(encParDateReelle).sort(function(a,b){
+    var [ma,ya] = a.label.split('/'); var [mb,yb] = b.label.split('/');
+    return (parseInt(ya)*12+parseInt(ma)) - (parseInt(yb)*12+parseInt(mb));
+  });
+
+  // ── Top mois (mois du projet les plus encaissés) ──
+  var topMois = encParMoisProjet.slice().sort(function(a,b){ return b.total-a.total; }).slice(0,5);
+
+  // ── Mois les moins payés ──
+  var flopMois = encParMoisProjet.slice().sort(function(a,b){ return a.total-b.total; }).slice(0,3);
+
+  // ── Total global ──
+  var totalGlobal = encParMoisProjet.reduce(function(s,m){ return s+m.total; },0);
+  var totalAttendu = MEMBRES.reduce(function(s,m){ return s+m.montant*(MC+1); },0);
+  var tauxGlobal = totalAttendu>0 ? Math.round(totalGlobal/totalAttendu*100) : 0;
+
+  // ── Graphe barres: encaissements par mois projet ──
+  var maxVal = Math.max.apply(null, encParMoisProjet.map(function(m){ return m.total; })) || 1;
+  var graphBarres = encParMoisProjet.map(function(m, i) {
+    var pct = Math.round(m.total/maxVal*100);
+    var isCourant = i===MC;
+    var couleur = isCourant ? 'var(--or)' : m.total===0 ? 'var(--rougeD)' : m.total/maxVal>0.8 ? 'var(--vert)' : 'var(--bleu)';
+    return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;">'
+      +'<div style="font-size:8px;color:var(--grisC);margin-bottom:2px;writing-mode:vertical-lr;transform:rotate(180deg);white-space:nowrap;max-height:40px;overflow:hidden;">'+m.label+'</div>'
+      +'<div style="width:100%;background:'+couleur+';border-radius:3px 3px 0 0;height:'+Math.max(pct*0.8,2)+'px;transition:height .3s;"></div>'
+      +'<div style="font-size:7px;color:var(--grisC);margin-top:2px;">'+m.nb+'</div>'
+    +'</div>';
+  }).join('');
+
+  // ── Graphe barres: encaissements par date réelle ──
+  var maxDateVal = datesReelles.length ? Math.max.apply(null, datesReelles.map(function(d){ return d.total; })) : 1;
+  var graphDates = datesReelles.length ? datesReelles.map(function(d) {
+    var pct = Math.round(d.total/maxDateVal*100);
+    return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;">'
+      +'<div style="font-size:8px;color:var(--grisC);margin-bottom:2px;writing-mode:vertical-lr;transform:rotate(180deg);">'+d.label+'</div>'
+      +'<div style="width:100%;background:var(--vert);border-radius:3px 3px 0 0;height:'+Math.max(pct*0.8,2)+'px;"></div>'
+      +'<div style="font-size:8px;color:var(--vert);font-weight:700;margin-top:2px;">'+Math.round(d.total/1000)+'k</div>'
+    +'</div>';
+  }).join('') : '<div style="color:var(--grisC);text-align:center;padding:20px;font-size:12px">Aucune donnee de date disponible.<br/>Les dates seront enregistrees lors des prochains paiements.</div>';
+
+  return [
+    // RÉSUMÉ GLOBAL
+    '<div class="card-bleu" style="margin-bottom:14px">',
+      '<div style="color:var(--bleu);font-weight:800;font-size:15px;margin-bottom:4px">📈 Statistiques financières</div>',
+      '<div style="color:var(--grisC);font-size:12px">'+CFG.nom_eglise+' · '+CFG.nom_projet+'</div>',
+    '</div>',
+
+    '<div class="grid-2" style="margin-bottom:14px">',
+      [['Total encaissé', fmt(totalGlobal), 'var(--vert)', '#0a1e14'],
+       ['Taux global', tauxGlobal+'%', 'var(--bleu)', '#0a1428'],
+       ['Mois analysés', (MC+1)+' mois', 'var(--or)', '#1e140a'],
+       ['Membres actifs', MEMBRES.filter(function(m){return statutMembre(m)!=='inactif';}).length+'/'+MEMBRES.length, 'var(--vert)', '#0a1e14']
+      ].map(function(x){
+        return '<div style="background:'+x[3]+';border:1px solid '+x[2]+'22;border-radius:12px;padding:14px">'
+          +'<div style="color:var(--grisC);font-size:10px;font-weight:700;text-transform:uppercase">'+x[0]+'</div>'
+          +'<div style="color:'+x[2]+';font-weight:900;font-size:18px;margin-top:6px">'+x[1]+'</div>'
+        +'</div>';
+      }).join(''),
+    '</div>',
+
+    // GRAPHE PAR MOIS DE COTISATION
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px">Encaissements par mois de cotisation</div>',
+      '<div style="display:flex;align-items:flex-end;gap:2px;height:100px;padding-bottom:4px">'+graphBarres+'</div>',
+      '<div style="display:flex;gap:12px;margin-top:8px;font-size:10px;flex-wrap:wrap">',
+        '<span style="color:var(--vert)">■ Bon encaissement</span>',
+        '<span style="color:var(--bleu)">■ Moyen</span>',
+        '<span style="color:var(--or)">■ Mois courant</span>',
+        '<span style="color:var(--rougeD)">■ Aucun</span>',
+      '</div>',
+    '</div>',
+
+    // TOP 5 MEILLEURS MOIS
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--vert);font-weight:800;font-size:13px;margin-bottom:12px">🏆 Top 5 mois les mieux encaissés</div>',
+      topMois.map(function(m, i) {
+        var pct = totalAttendu>0 ? Math.round(m.total/(MEMBRES.length*(MEMBRES.reduce(function(s,mb){return s+mb.montant;},0)/MEMBRES.length||1))*100) : 0;
+        var medals = ['🥇','🥈','🥉','4.','5.'];
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">'
+          +'<div style="display:flex;align-items:center;gap:8px">'
+            +'<span style="font-size:16px">'+medals[i]+'</span>'
+            +'<div><div style="font-weight:600;font-size:13px">'+m.label+'</div>'
+            +'<div style="color:var(--grisC);font-size:11px">'+m.nb+' membre'+(m.nb>1?'s':'')+' payé'+(m.nb>1?'s':'')+'</div></div>'
+          +'</div>'
+          +'<div style="color:var(--vert);font-weight:900;font-size:14px">'+fmt(m.total)+'</div>'
+        +'</div>';
+      }).join(''),
+    '</div>',
+
+    // MOIS LES MOINS BONS
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--rouge);font-weight:800;font-size:13px;margin-bottom:12px">⚠ Mois avec le moins d'encaissements</div>',
+      flopMois.filter(function(m){ return m.total > 0; }).length ?
+        flopMois.filter(function(m){ return m.total > 0; }).map(function(m) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">'
+            +'<div><div style="font-weight:600;font-size:13px">'+m.label+'</div>'
+            +'<div style="color:var(--grisC);font-size:11px">'+m.nb+' membre'+(m.nb>1?'s':'')+' payé'+(m.nb>1?'s':'')+'</div></div>'
+            +'<div style="color:var(--rouge);font-weight:900;font-size:14px">'+fmt(m.total)+'</div>'
+          +'</div>';
+        }).join('')
+      : '<div style="color:var(--grisC);text-align:center;padding:12px;">Pas encore de données</div>',
+    '</div>',
+
+    // GRAPHE PAR DATE RÉELLE DE PAIEMENT
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:6px">Encaissements par date réelle de paiement</div>',
+      '<div style="color:var(--grisT);font-size:10px;margin-bottom:10px">Quand les paiements ont réellement été enregistrés</div>',
+      datesReelles.length ?
+        '<div style="display:flex;align-items:flex-end;gap:4px;height:100px;padding-bottom:4px">'+graphDates+'</div>'
+      : '<div style="color:var(--grisC);text-align:center;padding:20px;font-size:12px">Aucune donnée de date disponible.<br/>Les dates seront enregistrées lors des prochains paiements.</div>',
+    '</div>',
+
+    // BOUTON EXPORT PDF
+    '<div style="display:flex;gap:10px;margin-bottom:14px">',
+      '<button class="btn btn-or btn-full" style="font-size:14px;padding:14px" onclick="exporterRapportPDF()">&#x1F4C4; Exporter le rapport PDF</button>',
+    '</div>',
+
+    // TABLEAU DÉTAILLÉ
+    '<div class="card">',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:12px">Détail par mois de cotisation</div>',
+      '<div style="overflow-x:auto">',
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">',
+          '<thead><tr>',
+            '<th style="text-align:left;padding:8px;color:var(--grisC);font-weight:700;border-bottom:1px solid var(--border)">Mois</th>',
+            '<th style="text-align:right;padding:8px;color:var(--grisC);font-weight:700;border-bottom:1px solid var(--border)">Payés</th>',
+            '<th style="text-align:right;padding:8px;color:var(--grisC);font-weight:700;border-bottom:1px solid var(--border)">Encaissé</th>',
+            '<th style="text-align:right;padding:8px;color:var(--grisC);font-weight:700;border-bottom:1px solid var(--border)">Taux</th>',
+          '</tr></thead>',
+          '<tbody>',
+            encParMoisProjet.slice().reverse().map(function(m) {
+              var taux = MEMBRES.length>0 ? Math.round(m.nb/MEMBRES.length*100) : 0;
+              var couleur = taux>=80?'var(--vert)':taux>=50?'var(--or)':'var(--rouge)';
+              return '<tr style="border-bottom:1px solid var(--border)">'
+                +'<td style="padding:8px;font-weight:600">'+m.label+'</td>'
+                +'<td style="padding:8px;text-align:right;color:var(--grisC)">'+m.nb+'/'+MEMBRES.length+'</td>'
+                +'<td style="padding:8px;text-align:right;color:var(--vert);font-weight:700">'+fmt(m.total)+'</td>'
+                +'<td style="padding:8px;text-align:right;color:'+couleur+';font-weight:700">'+taux+'%</td>'
+              +'</tr>';
+            }).join(''),
+          '</tbody>',
+        '</table>',
+      '</div>',
+    '</div>',
+
+    // PRÉVISIONS
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--bleu);font-weight:800;font-size:13px;margin-bottom:12px">&#x1F52E; Prévisions des 6 prochains mois</div>',
+      (function(){
+        var prevs = calculerPrevisions();
+        if(!prevs.length) return '<div style="color:var(--grisC);text-align:center;padding:16px">Toutes les périodes sont passées.</div>';
+        return '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+          +'<thead><tr style="background:#0a1628;color:#ddeeff;">'
+            +'<th style="padding:8px;text-align:left">Mois</th>'
+            +'<th style="padding:8px;text-align:right;color:#4eff9b">Optimiste</th>'
+            +'<th style="padding:8px;text-align:right;color:#64d4ff">Prévu</th>'
+            +'<th style="padding:8px;text-align:right;color:#ffb347">Pessimiste</th>'
+          +'</tr></thead><tbody>'
+          +prevs.map(function(p,i){
+            return '<tr style="border-bottom:1px solid var(--border);background:'+(i%2===0?'#0a1628':'#0f1923')+'">'
+              +'<td style="padding:8px;font-weight:600;color:#ddeeff">'+p.label+'</td>'
+              +'<td style="padding:8px;text-align:right;color:#4eff9b;font-weight:700">'+fmt(p.optimiste)+'</td>'
+              +'<td style="padding:8px;text-align:right;color:#64d4ff;font-weight:700">'+fmt(p.prevu)+'</td>'
+              +'<td style="padding:8px;text-align:right;color:#ffb347;font-weight:700">'+fmt(p.pessimiste)+'</td>'
+            +'</tr>';
+          }).join('')
+          +'</tbody></table>';
+      })(),
+    '</div>',
+
+    // HISTORIQUE CONNEXIONS (résumé)
+    '<div class="card">',
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">',
+        '<div style="color:var(--grisC);font-weight:800;font-size:13px">&#x1F4DD; Connexions récentes</div>',
+        '<button onclick="changerVue(\'historique\')" class="btn btn-ghost" style="font-size:11px;padding:6px 12px">Voir tout</button>',
+      '</div>',
+      (function(){
+        var j=JSON.parse(localStorage.getItem('temple_journal')||'[]');
+        var c=j.filter(function(e){return e.action==='CONNEXION';}).slice(0,5);
+        if(!c.length) return '<div style="color:var(--grisC);font-size:12px;text-align:center;padding:12px">Aucune connexion</div>';
+        return c.map(function(e){
+          return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">'
+            +'<span style="color:var(--vert)">&#x1F7E2; '+e.par+'</span>'
+            +'<span style="color:var(--grisT)">'+e.date+'</span>'
+          +'</div>';
+        }).join('');
+      })(),
+    '</div>',  ].join('');
+}
+
 function vueDashboard(){var aJour=MEMBRES.filter(function(m){return statutMembre(m)==='ajour';}).length;var retard=MEMBRES.filter(function(m){return statutMembre(m)==='retard';}).length;var verse=MEMBRES.reduce(function(s,m){return s+m.paiements.filter(function(p,i){return p&&i<=MOIS_COURANT();}).length*m.montant;},0);var attendu=MEMBRES.reduce(function(s,m){return s+m.montant*(MOIS_COURANT()+1);},0);var taux=attendu>0?Math.round(verse/attendu*100):0;var payesCeMois=MEMBRES.filter(function(m){return m.paiements[MOIS_COURANT()];}).length;var retardListe=MEMBRES.filter(function(m){return statutMembre(m)!=='ajour';}).slice(0,8).map(function(m){var r=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;return'<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:13px">'+m.nom+'</div><div style="color:var(--grisC);font-size:11px">'+r+' mois · dette: '+fmt(r*m.montant)+'</div></div>'+badgeHTML(statutMembre(m))+'</div>';}).join('');return['<div style="background:linear-gradient(135deg,#0a1e14,#0d2a1a);border:1px solid rgba(78,255,155,0.2);border-radius:14px;padding:16px 18px;display:flex;gap:14px;align-items:center;margin-bottom:14px">','<div style="font-size:36px">&#x1F4C5;</div><div><div style="color:var(--vert);font-weight:800;font-size:15px">Collecte – '+TOUS_MOIS()[MOIS_COURANT()]+'</div><div style="color:var(--grisC);font-size:13px;margin-top:2px"><b style="color:var(--blanc)">'+payesCeMois+'</b> membres ont payé · <b style="color:var(--or)">'+(MEMBRES.length-payesCeMois)+'</b> en attente</div></div></div>','<div class="grid-2" style="margin-bottom:14px">',[['Total encaissé',fmt(verse),'var(--vert)','#0a1e14'],['Taux',taux+'%','var(--bleu)','#0a1428'],['À jour',aJour+' membres','var(--vert)','#0a1e14'],['En retard',retard+' membres','var(--or)','#1e140a']].map(function(x){return'<div class="stat-box" style="background:'+x[3]+';border:1px solid '+x[2]+'22"><div style="color:var(--grisC);font-size:10px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:900;font-size:22px;margin-top:6px">'+x[1]+'</div></div>';}).join(''),'</div>','<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="color:var(--grisC);font-size:12px;font-weight:700">PROGRESSION</span><span style="color:var(--vert);font-weight:700">'+taux+'%</span></div><div class="progress-track"><div class="progress-fill" style="width:'+taux+'%"></div></div></div>','<div class="card"><div style="color:var(--or);font-weight:800;font-size:13px;margin-bottom:12px">&#x26A0; MEMBRES EN RETARD</div>',retardListe||'<div style="color:var(--grisC);text-align:center;padding:16px;font-size:13px">&#x1F389; Tous les membres sont à jour !</div>','</div>'].join('');}
 
 // VALIDATION
@@ -1067,7 +1494,10 @@ function toggleMoisSelection(idx){
   else MOIS_SELECTIONNES.push(idx);
   MOIS_SELECTIONNES.sort(function(a,b){return a-b;});var el=document.getElementById('mois-sel-'+idx);if(el){var sel=MOIS_SELECTIONNES.indexOf(idx)>=0,ec=idx===MOIS_COURANT();el.style.background=sel?'var(--vertD)':'#111d2a';el.style.borderColor=sel?'var(--vert)':(ec?'var(--or)':'#2a1a0d');var last=el.querySelector('div:last-child');if(last){last.style.color=sel?'var(--vert)':'#1a3a5a';last.textContent=sel?'&#x2714;':'○';}}MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;majRecap();}
 function majRecap(){var m=MEMBRE_VALIDATION;if(!m)return;var total=MOIS_SELECTIONNES.length*m.montant,recu=MONTANT_RECU;var recap=document.getElementById('recap-content'),ligne=document.getElementById('recap-ligne');if(ligne)ligne.innerHTML='<div style="display:flex;justify-content:space-between"><span style="color:var(--grisC)">Attendu :</span><span style="color:var(--or);font-weight:700">'+fmt(total)+'</span></div>'+'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--grisC)">Reçu :</span><span style="color:'+(recu>=total?'var(--vert)':'var(--rouge)')+';font-weight:700">'+fmt(recu)+'</span></div>'+(recu<total&&recu>0?'<div style="background:var(--orD);border:1px solid rgba(255,179,71,0.3);border-radius:8px;padding:7px 12px;margin-top:8px;color:var(--or);font-size:11px">&#x26A0; Reste '+fmt(total-recu)+'</div>':'');if(recap)recap.innerHTML='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Membre</span><span style="font-weight:600">'+m.nom+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Mois</span><span style="color:var(--vert);font-weight:600">'+MOIS_SELECTIONNES.length+' mois</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Périodes</span><span style="font-size:11px;color:var(--blanc)">'+MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ')+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:10px 0 0"><span style="color:var(--grisC);font-weight:700">TOTAL</span><span style="color:var(--vert);font-weight:900;font-size:18px">'+fmt(total)+'</span></div>';var btn=document.getElementById('btn-confirmer');if(btn){btn.disabled=MOIS_SELECTIONNES.length===0;btn.style.opacity=MOIS_SELECTIONNES.length===0?'0.4':'1';}}
-function confirmerValidation(){var m=MEMBRE_VALIDATION;if(!m||!MOIS_SELECTIONNES.length)return;var moisStr=MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ');journaliser('PAIEMENT VALIDÉ',m.nom+' – '+moisStr+' – '+fmt(MOIS_SELECTIONNES.length*m.montant));var now=new Date();MOIS_SELECTIONNES.forEach(function(idx){var mb=MEMBRES.find(function(x){return x.id===m.id;});if(mb)mb.paiements[idx]=1;});sauvegarder();sauvegarderCloud();RECU_COURANT={id:'REC-'+now.getTime(),membre:Object.assign({},m),moisPayes:MOIS_SELECTIONNES.slice(),montantTotal:MOIS_SELECTIONNES.length*m.montant,montantRecu:MONTANT_RECU,date:now.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),heure:now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};VUE_ACTUELLE='recu';afficherVue();}
+function confirmerValidation(){var m=MEMBRE_VALIDATION;if(!m||!MOIS_SELECTIONNES.length)return;var moisStr=MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ');journaliser('PAIEMENT VALIDÉ',m.nom+' – '+moisStr+' – '+fmt(MOIS_SELECTIONNES.length*m.montant));var now=new Date();MOIS_SELECTIONNES.forEach(function(idx){
+    var mb=MEMBRES.find(function(x){return x.id===m.id;});
+    if(mb) mb.paiements[idx]=now.getTime(); // Stocker timestamp de paiement
+  });sauvegarder();sauvegarderCloud();RECU_COURANT={id:'REC-'+now.getTime(),membre:Object.assign({},m),moisPayes:MOIS_SELECTIONNES.slice(),montantTotal:MOIS_SELECTIONNES.length*m.montant,montantRecu:MONTANT_RECU,date:now.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),heure:now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};VUE_ACTUELLE='recu';afficherVue();}
 
 // REÇU
 function vueRecu(){var r=RECU_COURANT;if(!r)return'';var m=MEMBRES.find(function(x){return x.id===r.membre.id;}),s=m?statutMembre(m):'ajour';var msg='&#x1F9FE; *REÇU DE COTISATION – '+CFG.nom_eglise.toUpperCase()+'*\n\n&#x1F464; Membre : '+r.membre.nom+'\n&#x1F194; Code : '+r.membre.id+'\n&#x1F4C5; Date : '+r.date+' à '+r.heure+'\n\n&#x1F4B0; Mois validés :\n'+r.moisPayes.map(function(i){return '  • '+TOUS_MOIS()[i]+' – '+fmt(r.membre.montant);}).join('\n')+'\n\n&#x2705; TOTAL VALIDÉ : '+fmt(r.montantTotal)+'\n\n&#x1F64F; Que Dieu bénisse votre engagement !';var waLink=r.membre.tel?'<a href="https://wa.me/'+r.membre.tel.replace(/\D/g,'')+encodeURIComponent('?text='+msg)+'" target="_blank" class="btn btn-primary" style="flex:1;text-decoration:none">&#x1F4F2; WhatsApp</a>':'';return['<div style="background:linear-gradient(135deg,#0a1e14,#0d3a1a);border:1px solid rgba(78,255,155,0.3);border-radius:14px;padding:28px 20px;text-align:center;margin-bottom:14px"><div style="font-size:52px;margin-bottom:12px">&#x2705;</div><div style="color:var(--vert);font-weight:900;font-size:22px;margin-bottom:6px">Paiement validé !</div><div style="color:var(--bleu);font-weight:700;font-size:15px;margin-top:10px">'+r.id+'</div></div>','<div style="border:2px solid #1a3a5a;border-radius:14px;padding:20px;margin-bottom:14px">',(LOGO_DATA?'<div style="text-align:center;margin-bottom:12px"><img src="'+LOGO_DATA+'" style="height:50px;border-radius:10px;object-fit:contain"/></div>':''),'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px"><div><div style="font-weight:800;font-size:16px">'+r.membre.nom+'</div><div style="color:var(--grisC);font-size:12px;margin-top:2px">'+r.membre.id+(r.membre.tel?' · '+r.membre.tel:'')+'</div><div style="margin-top:6px">'+badgeHTML(s)+'</div></div><div class="qr-wrap" id="qr-recu-container"></div></div>','<div style="background:#111d2a;border-radius:10px;padding:12px 14px;margin-bottom:14px">'+r.moisPayes.map(function(idx){return'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>'+TOUS_MOIS()[idx]+'</span><span style="color:var(--vert);font-weight:600">'+fmt(r.membre.montant)+'</span></div>';}).join('')+'</div>','<div style="display:flex;justify-content:space-between;align-items:center;background:var(--vertD);border-radius:10px;padding:14px 16px;border:1px solid rgba(78,255,155,0.2)"><div><div style="color:var(--grisC);font-size:11px">TOTAL VALIDÉ</div><div style="color:var(--vert);font-weight:900;font-size:22px">'+fmt(r.montantTotal)+'</div></div><div style="text-align:right"><div style="color:var(--grisC);font-size:11px">'+r.date+'</div><div style="color:var(--grisC);font-size:11px">'+r.heure+'</div></div></div>','</div>','<div class="card" style="margin-bottom:14px"><div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:12px">&#x1F4F1; PARTAGER</div><div style="background:#0d1e14;border:1px solid #1a3a1a;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#aaccaa;font-size:12px;font-family:monospace;line-height:1.7;white-space:pre-wrap" id="msg-whatsapp">'+msg+'</div><div style="display:flex;gap:10px"><button class="btn btn-primary" style="flex:1" id="btn-copier-msg">&#x1F4CB; Copier</button>'+waLink+'</div><div id="copie-ok" style="display:none;color:var(--vert);font-size:12px;text-align:center;margin-top:8px">&#x2714; Message copié !</div></div>','<div style="display:flex;gap:10px"><button class="btn btn-primary" style="flex:1;padding:14px" onclick="changerVue(&apos;scanner&apos;)">&#x1F4F7; Scanner suivant</button><button class="btn btn-ghost" style="flex:1;padding:14px" onclick="changerVue(\'membres\')">&#x1F465; Membres</button></div>'].join('');}
@@ -1240,7 +1670,7 @@ function effacerTout(){if(!confirm('&#x26A0; Effacer TOUS les membres ?'))return
 function exporterPourMembres(){var d={cfg:CFG,membres:MEMBRES.map(function(m){return{id:m.id,nom:m.nom,montant:m.montant,paiements:m.paiements};}),export_date:new Date().toISOString()};var blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='donnees_membres.json';a.click();notifier('&#x2705; Exporté !');}
 
 // PARAMÈTRES
-function vueParametres(){var mc=CFG.mois_courant_mois,ma=CFG.mois_courant_annee,md=CFG.mois_debut,ad=CFG.annee_debut,nb=CFG.nb_mois;return['<div class="form-card"><div style="color:var(--vert);font-weight:900;font-size:16px;margin-bottom:18px">&#x2699; Paramètres du projet</div>','<div class="field"><label>Nom de l\'Église</label><input id="p-nom-eglise" type="text" value="'+CFG.nom_eglise+'"/></div>','<div class="field"><label>Nom du projet</label><input id="p-nom-projet" type="text" value="'+CFG.nom_projet+'"/></div>','<div class="sep"></div>','<div class="field"><label>Durée totale</label><div style="display:flex;gap:8px;flex-wrap:wrap">'+[12,24,36,48,60].map(function(n){return'<button onclick="selDuree('+n+')" id="duree-'+n+'" class="btn '+(n===DUREE_SELECTIONNEE?'btn-primary':'btn-ghost')+'" style="padding:8px 12px;font-size:12px">'+n+' mois</button>';}).join('')+'</div></div>','<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"><div><label>Mois début</label><select id="p-mois-debut">'+MOIS_LONGS.map(function(m,i){return'<option value="'+i+'"'+(i===md?' selected':'')+'>'+m+'</option>';}).join('')+'</select></div><div><label>Année début</label><select id="p-annee-debut">'+Array.from({length:10},function(_,i){return 2020+i;}).map(function(a){return'<option value="'+a+'"'+(a===ad?' selected':'')+'>'+a+'</option>';}).join('')+'</select></div></div>','<div style="background:#111d2a;border:1px solid var(--orD);border-radius:10px;padding:14px;margin-bottom:14px"><div style="color:var(--or);font-size:12px;margin-bottom:12px">&#x1F5D3; Mois en cours</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Mois courant</label><select id="p-mois-courant">'+MOIS_LONGS.map(function(m,i){return'<option value="'+i+'"'+(i===mc?' selected':'')+'>'+m+'</option>';}).join('')+'</select></div><div><label>Année courante</label><select id="p-annee-courante">'+Array.from({length:10},function(_,i){return 2020+i;}).map(function(a){return'<option value="'+a+'"'+(a===ma?' selected':'')+'>'+a+'</option>';}).join('')+'</select></div></div><div id="mois-courant-idx-label" style="color:var(--grisC);font-size:11px;margin-top:8px">'+calculerLabelMoisCourant(md,ad,mc,ma,nb)+'</div></div>','<div id="p-erreur" style="display:none;background:var(--rougeD);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:8px 12px;color:var(--rouge);font-size:12px;margin-bottom:12px"></div>','<button class="btn btn-primary btn-full" style="padding:14px" onclick="sauvegarderParametres()">&#x2705; Enregistrer</button></div>'].join('');}
+function vueParametres(){var mc=CFG.mois_courant_mois,ma=CFG.mois_courant_annee,md=CFG.mois_debut,ad=CFG.annee_debut,nb=CFG.nb_mois;return['<div class="form-card"><div style="color:var(--vert);font-weight:900;font-size:16px;margin-bottom:18px">&#x2699; Paramètres du projet</div>','<div class="field"><label>Nom de l\'Église</label><input id="p-nom-eglise" type="text" value="'+CFG.nom_eglise+'"/></div>','<div class="field"><label>Nom du projet</label><input id="p-nom-projet" type="text" value="'+CFG.nom_projet+'"/></div>','<div class="sep"></div>','<div class="field"><label>Durée totale</label><div style="display:flex;gap:8px;flex-wrap:wrap">'+[12,24,36,48,60].map(function(n){return'<button onclick="selDuree('+n+')" id="duree-'+n+'" class="btn '+(n===DUREE_SELECTIONNEE?'btn-primary':'btn-ghost')+'" style="padding:8px 12px;font-size:12px">'+n+' mois</button>';}).join('')+'</div></div>','<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"><div><label>Mois début</label><select id="p-mois-debut">'+MOIS_LONGS.map(function(m,i){return'<option value="'+i+'"'+(i===md?' selected':'')+'>'+m+'</option>';}).join('')+'</select></div><div><label>Année début</label><select id="p-annee-debut">'+Array.from({length:10},function(_,i){return 2020+i;}).map(function(a){return'<option value="'+a+'"'+(a===ad?' selected':'')+'>'+a+'</option>';}).join('')+'</select></div></div>','<div style="background:#111d2a;border:1px solid var(--orD);border-radius:10px;padding:14px;margin-bottom:14px"><div style="color:var(--or);font-size:12px;margin-bottom:12px">&#x1F5D3; Mois en cours</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Mois courant</label><select id="p-mois-courant">'+MOIS_LONGS.map(function(m,i){return'<option value="'+i+'"'+(i===mc?' selected':'')+'>'+m+'</option>';}).join('')+'</select></div><div><label>Année courante</label><select id="p-annee-courante">'+Array.from({length:10},function(_,i){return 2020+i;}).map(function(a){return'<option value="'+a+'"'+(a===ma?' selected':'')+'>'+a+'</option>';}).join('')+'</select></div></div><div id="mois-courant-idx-label" style="color:var(--grisC);font-size:11px;margin-top:8px">'+calculerLabelMoisCourant(md,ad,mc,ma,nb)+'</div></div>','<div id="p-erreur" style="display:none;background:var(--rougeD);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:8px 12px;color:var(--rouge);font-size:12px;margin-bottom:12px"></div>','<button class="btn btn-primary btn-full" style="padding:14px" onclick="sauvegarderParametres()">&#x2705; Enregistrer</button>','</div>','<div class="card" style="margin-top:14px"><div style="color:var(--bleu);font-weight:800;font-size:14px;margin-bottom:10px">&#x1F4F1; Installer l\'application</div><div style="color:var(--grisC);font-size:12px;margin-bottom:12px">Installez l\'app sur votre écran d\'accueil pour un accès rapide sans navigateur.</div><button id="btn-install-pwa" class="btn btn-bleu btn-full" onclick="installerPWA()" style="display:none">&#x2B07; Installer sur cet appareil</button><div id="pwa-status" style="color:var(--grisT);font-size:11px;text-align:center">Pour installer: Menu du navigateur → Ajouter à l\'écran d\'accueil</div></div>'].join('');}
 function calculerLabelMoisCourant(md,ad,mc,ma,nb){var base=ad*12+md,cur=ma*12+mc,idx=cur-base;if(idx<0)return'<span style="color:var(--rouge)">&#x26A0; Avant le début</span>';if(idx>=nb)return'<span style="color:var(--rouge)">&#x26A0; Après la fin</span>';return'Mois <b style="color:var(--or)">'+(idx+1)+'</b> sur '+nb;}
 function selDuree(n){DUREE_SELECTIONNEE=n;[12,24,36,48,60].forEach(function(x){var el=document.getElementById('duree-'+x);if(el){el.className='btn '+(x===n?'btn-primary':'btn-ghost');el.style.cssText='padding:8px 12px;font-size:12px';}});majLabelCourant();}
 function majLabelCourant(){var md=parseInt(document.getElementById('p-mois-debut').value);var ad=parseInt(document.getElementById('p-annee-debut').value);var mc=parseInt(document.getElementById('p-mois-courant').value);var ma=parseInt(document.getElementById('p-annee-courante').value);var el=document.getElementById('mois-courant-idx-label');if(el)el.innerHTML=calculerLabelMoisCourant(md,ad,mc,ma,DUREE_SELECTIONNEE||CFG.nb_mois);}
@@ -1353,6 +1783,277 @@ function ajouterMontantAdmin(){var input=document.getElementById('admin-montant-
 function supprimerMontant(m){if(MONTANTS.length<=1){notifier('&#x26A0; Gardez au moins un montant','danger');return;}MONTANTS=MONTANTS.filter(function(x){return x!==m;});sauvegarderMontants();sauvegarderCloud();notifier('&#x1F5D1; '+fmt(m)+' retiré','danger');afficherVue();}
 
 // INIT
+
+// ══════════════════════════════════════════════════
+// RAPPELS WHATSAPP
+// ══════════════════════════════════════════════════
+function genererRappelsWhatsApp() {
+  var MC = MOIS_COURANT();
+  var membresRetard = MEMBRES.filter(function(m){
+    return statutMembre(m) !== 'ajour' && m.tel;
+  });
+  var membersSansTel = MEMBRES.filter(function(m){
+    return statutMembre(m) !== 'ajour' && !m.tel;
+  });
+
+  if (!membresRetard.length && !membersSansTel.length) {
+    notifier('&#x2705; Tous les membres sont a jour !');
+    return;
+  }
+
+  VUE_ACTUELLE = 'rappels';
+  afficherVue();
+}
+
+function vueRappels() {
+  var MC = MOIS_COURANT();
+  var membresRetard = MEMBRES.filter(function(m){ return statutMembre(m) !== 'ajour'; });
+  var avecTel = membresRetard.filter(function(m){ return m.tel; });
+  var sansTel = membresRetard.filter(function(m){ return !m.tel; });
+
+  var lignes = avecTel.map(function(m) {
+    var retards = m.paiements.filter(function(p,i){ return !p && i<=MC; }).length;
+    var dette = retards * m.montant;
+    var msg = '&#x1F4AC; *RAPPEL COTISATION - ' + CFG.nom_eglise.toUpperCase() + '*
+
+'
+      + 'Bonjour ' + m.nom + ',
+
+'
+      + 'Nous vous informons que vous avez *' + retards + ' mois* de cotisation en retard '
+      + 'pour le projet *' + CFG.nom_projet + '*.
+
+'
+      + '&#x1F4B0; Montant dû : *' + fmt(dette) + '*
+'
+      + '&#x1F4C5; Mois concernés : ' + m.paiements.map(function(p,i){ return (!p&&i<=MC)?TOUS_MOIS()[i]:null; }).filter(Boolean).join(', ') + '
+
+'
+      + 'Merci de régulariser votre situation au plus tôt.
+
+'
+      + '&#x1F64F; Que Dieu bénisse votre engagement !';
+
+    var tel = m.tel.replace(/\D/g,'');
+    var waUrl = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(msg);
+
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'
+        + '<div>'
+          + '<div style="font-weight:700;font-size:14px">' + m.nom + '</div>'
+          + '<div style="color:var(--grisC);font-size:11px;margin-top:2px">' + m.id + ' · ' + m.tel + '</div>'
+          + '<div style="color:var(--rouge);font-size:12px;margin-top:4px">' + retards + ' mois en retard · ' + fmt(dette) + '</div>'
+        + '</div>'
+        + badgeHTML(statutMembre(m))
+      + '</div>'
+      + '<div style="background:#0d1e14;border:1px solid #1a3a1a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#aaccaa;font-family:monospace;white-space:pre-wrap;max-height:120px;overflow-y:auto">' + msg + '</div>'
+      + '<div style="display:flex;gap:8px">'
+        + '<a href="' + waUrl + '" target="_blank" class="btn btn-primary" style="flex:1;text-decoration:none;font-size:12px">&#x1F4F2; Envoyer sur WhatsApp</a>'
+        + '<button onclick="copierRappel(this,'' + encodeURIComponent(msg) + '')" class="btn btn-ghost" style="font-size:12px;padding:8px 12px">&#x1F4CB; Copier</button>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+
+  var sansTelHtml = sansTel.length ? '<div class="card" style="border-color:rgba(255,107,107,0.3);margin-bottom:14px">'
+    + '<div style="color:var(--rouge);font-weight:800;font-size:13px;margin-bottom:10px">&#x26A0; Membres sans numéro WhatsApp ('+sansTel.length+')</div>'
+    + sansTel.map(function(m){
+        var retards=m.paiements.filter(function(p,i){return !p&&i<=MC;}).length;
+        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'
+          +'<div><div style="font-weight:600">'+m.nom+'</div><div style="color:var(--grisC);font-size:11px">'+m.id+'</div></div>'
+          +'<div style="color:var(--rouge);font-weight:700">'+retards+' mois · '+fmt(retards*m.montant)+'</div>'
+        +'</div>';
+      }).join('')
+    + '</div>' : '';
+
+  // Bouton envoyer tous
+  var envoyerTousBtn = avecTel.length > 1 ? '<div class="card" style="margin-bottom:14px">'
+    + '<div style="color:var(--grisC);font-size:12px;margin-bottom:10px">Envoyer un rappel groupé à tous les membres en retard avec WhatsApp</div>'
+    + '<button onclick="envoyerTousRappels()" class="btn btn-primary btn-full">&#x1F4E2; Envoyer à tous ('+avecTel.length+')</button>'
+    + '</div>' : '';
+
+  return [
+    '<button class="btn btn-ghost" style="margin-bottom:14px;font-size:12px" onclick="changerVue('membres')">&#x2039; Retour</button>',
+    '<div class="card-bleu" style="margin-bottom:14px">',
+      '<div style="color:var(--bleu);font-weight:800;font-size:15px;margin-bottom:4px">&#x1F514; Rappels WhatsApp</div>',
+      '<div style="color:var(--grisC);font-size:12px">'+membresRetard.length+' membre(s) en retard · '+avecTel.length+' avec WhatsApp</div>',
+    '</div>',
+    envoyerTousBtn,
+    sansTelHtml,
+    avecTel.length ? '<div style="color:var(--or);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MEMBRES À RELANCER ('+avecTel.length+')</div>' : '',
+    lignes || '<div class="empty-state"><div style="font-size:48px">&#x1F4F2;</div><div style="margin-top:16px;font-weight:700;color:var(--vert)">Tous les membres avec WhatsApp sont à jour !</div></div>',
+  ].join('');
+}
+
+function copierRappel(btn, msgEncoded) {
+  var msg = decodeURIComponent(msgEncoded);
+  navigator.clipboard.writeText(msg).catch(function(){});
+  var old = btn.textContent;
+  btn.textContent = '&#x2714; Copié !';
+  setTimeout(function(){ btn.innerHTML = '&#x1F4CB; Copier'; }, 2000);
+}
+
+function envoyerTousRappels() {
+  var MC = MOIS_COURANT();
+  var avecTel = MEMBRES.filter(function(m){ return statutMembre(m)!=='ajour' && m.tel; });
+  if(!avecTel.length) return;
+  // Ouvrir WhatsApp pour le premier, puis les suivants
+  avecTel.forEach(function(m, i) {
+    var retards = m.paiements.filter(function(p,idx){ return !p&&idx<=MC; }).length;
+    var dette = retards*m.montant;
+    var msg = 'Bonjour '+m.nom+', vous avez '+retards+' mois de cotisation en retard pour '+CFG.nom_projet+'. Montant dû : '+fmt(dette)+'. Merci de régulariser. &#x1F64F;';
+    var url = 'https://wa.me/'+m.tel.replace(/\D/g,'')+'?text='+encodeURIComponent(msg);
+    setTimeout(function(){ window.open(url, '_blank'); }, i*1000);
+  });
+  notifier('&#x1F4E2; '+avecTel.length+' rappels envoyés !');
+}
+
+// ══════════════════════════════════════════════════
+// IMPORT EXCEL/CSV
+// ══════════════════════════════════════════════════
+function importerCSV(input) {
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    // Détecter séparateur: virgule ou point-virgule
+    var sep = text.indexOf(';') > text.indexOf(',') ? ';' : ',';
+    var lines = text.split('\n').filter(function(l){ return l.trim(); });
+    if(lines.length < 2) { notifier('&#x26A0; Fichier vide ou invalide','danger'); return; }
+
+    // Détecter les colonnes
+    var headers = lines[0].split(sep).map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
+    var colNom = headers.findIndex(function(h){ return h.includes('nom') || h.includes('name'); });
+    var colMontant = headers.findIndex(function(h){ return h.includes('montant') || h.includes('amount') || h.includes('cotis'); });
+    var colTel = headers.findIndex(function(h){ return h.includes('tel') || h.includes('phone') || h.includes('mobile'); });
+
+    if(colNom < 0) { notifier('&#x26A0; Colonne "Nom" non trouvée','danger'); return; }
+
+    var importes = 0, ignores = 0;
+    lines.slice(1).forEach(function(line) {
+      var cols = line.split(sep).map(function(c){ return c.trim().replace(/"/g,''); });
+      var nom = cols[colNom];
+      if(!nom) { ignores++; return; }
+
+      // Ignorer si membre existe déjà
+      if(MEMBRES.some(function(m){ return m.nom.toLowerCase()===nom.toLowerCase(); })) { ignores++; return; }
+
+      var montant = colMontant>=0 ? parseInt(cols[colMontant])||2000 : 2000;
+      var tel = colTel>=0 ? cols[colTel] : '';
+      var id = genId(MEMBRES.length+1);
+      MEMBRES.push({id:id, nom:nom, montant:montant, tel:tel, paiements:Array(CFG.nb_mois).fill(0)});
+      importes++;
+    });
+
+    sauvegarder();
+    sauvegarderCloud();
+    notifier('&#x2705; '+importes+' membres importés, '+ignores+' ignorés');
+    changerVue('membres');
+  };
+  reader.readAsText(file, 'UTF-8');
+  input.value = '';
+}
+
+// ══════════════════════════════════════════════════
+// PRÉVISION ENCAISSEMENTS
+// ══════════════════════════════════════════════════
+function calculerPrevisions() {
+  var MC = MOIS_COURANT();
+  var tousMois = TOUS_MOIS();
+
+  // Taux moyen de collecte par mois (basé sur l'historique)
+  var tauxHistorique = [];
+  for(var i=0; i<=MC; i++) {
+    var nb = MEMBRES.filter(function(m){ return m.paiements[i]; }).length;
+    tauxHistorique.push(MEMBRES.length > 0 ? nb/MEMBRES.length : 0);
+  }
+  var tauxMoyen = tauxHistorique.length > 0
+    ? tauxHistorique.reduce(function(s,t){return s+t;},0)/tauxHistorique.length
+    : 0.7;
+
+  // Prévisions pour les 6 prochains mois
+  var previsions = [];
+  for(var j=MC+1; j<Math.min(MC+7, CFG.nb_mois); j++) {
+    var montantMoyen = MEMBRES.reduce(function(s,m){return s+m.montant;},0)/MEMBRES.length||0;
+    var prevu = Math.round(MEMBRES.length * tauxMoyen * montantMoyen);
+    var optimiste = Math.round(MEMBRES.length * Math.min(tauxMoyen*1.2,1) * montantMoyen);
+    var pessimiste = Math.round(MEMBRES.length * tauxMoyen*0.8 * montantMoyen);
+    previsions.push({label:tousMois[j], prevu:prevu, optimiste:optimiste, pessimiste:pessimiste});
+  }
+  return previsions;
+}
+
+// ══════════════════════════════════════════════════
+// HISTORIQUE CONNEXIONS
+// ══════════════════════════════════════════════════
+function vueHistoriqueConnexions() {
+  var journal = JSON.parse(localStorage.getItem('temple_journal')||'[]');
+  var connexions = journal.filter(function(e){
+    return e.action==='CONNEXION'||e.action==='DÉCONNEXION';
+  });
+
+  var lignes = connexions.slice(0,50).map(function(e) {
+    var ic = e.action==='CONNEXION' ? '&#x1F7E2;' : '&#x1F534;';
+    var c = e.action==='CONNEXION' ? 'var(--vert)' : 'var(--rouge)';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<span style="font-size:16px">'+ic+'</span>'
+        +'<div>'
+          +'<div style="font-weight:600;font-size:13px">'+e.par+'</div>'
+          +'<div style="color:var(--grisC);font-size:11px">'+e.detail+'</div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+        +'<div style="color:'+c+';font-size:11px;font-weight:700">'+e.action+'</div>'
+        +'<div style="color:var(--grisT);font-size:10px">'+e.date+'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+
+  return [
+    '<div class="card-bleu" style="margin-bottom:14px">',
+      '<div style="color:var(--bleu);font-weight:800;font-size:15px;margin-bottom:4px">&#x1F4DD; Historique des connexions</div>',
+      '<div style="color:var(--grisC);font-size:12px">'+connexions.length+' événements enregistrés</div>',
+    '</div>',
+    connexions.length
+      ? '<div class="card">'+lignes+'</div>'
+      : '<div class="empty-state"><div style="font-size:48px">&#x1F4DD;</div><div style="margin-top:16px">Aucune connexion enregistrée</div></div>',
+  ].join('');
+}
+
+// Enregistrer le Service Worker (PWA)
+var _deferredPWAPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredPWAPrompt = e;
+  var btn = document.getElementById('btn-install-pwa');
+  if(btn) { btn.style.display='flex'; }
+  var status = document.getElementById('pwa-status');
+  if(status) status.style.display='none';
+});
+window.addEventListener('appinstalled', function() {
+  notifier('&#x2705; Application installée avec succès !');
+  _deferredPWAPrompt = null;
+});
+function installerPWA() {
+  if(!_deferredPWAPrompt) { notifier('&#x26A0; Utilisez le menu du navigateur pour installer','danger'); return; }
+  _deferredPWAPrompt.prompt();
+  _deferredPWAPrompt.userChoice.then(function(result){
+    if(result.outcome==='accepted') notifier('&#x2705; Installation acceptée !');
+    _deferredPWAPrompt = null;
+  });
+}
+
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      console.log('SW enregistré:', reg.scope);
+    }).catch(function(err){
+      console.log('SW erreur:', err);
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-role-comite').addEventListener('click', function(){ choisirRole('comite'); });
   document.getElementById('btn-role-admin').addEventListener('click',  function(){ choisirRole('admin'); });
@@ -1361,7 +2062,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('login-user').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('login-pass').focus(); });
   document.getElementById('login-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') tentativeConnexion(); });
   document.getElementById('login-admin-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') tentativeConnexionAdmin(); });
-  ['membres','dashboard','scanner','cartes','sauvegarde','parametres','admin'].forEach(function(v){
+  ['membres','dashboard','stats','scanner','cartes','sauvegarde','parametres','admin'].forEach(function(v){
     var el=document.getElementById('nav-'+v); if(el) el.addEventListener('click',function(){changerVue(v);});
   });
   document.getElementById('btn-add-top').addEventListener('click', function(){ ouvrirFormulaire(); });
