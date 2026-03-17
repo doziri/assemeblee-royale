@@ -22,6 +22,25 @@ var db = firebase.database();
 </script>
 <script>
 
+// ═══ FORMAT NUMÉRO WHATSAPP ═══
+function formatWANumber(tel) {
+  if (!tel) return '';
+  // Supprimer tous les caractères non numériques sauf le +
+  var num = tel.replace(/[^0-9+]/g, '');
+  // Supprimer le + du début si présent (wa.me ne veut pas de +)
+  num = num.replace(/^\+/, '');
+  // Si le numéro commence par 0 (format local), ajouter l'indicatif 225 (Côte d'Ivoire)
+  if (num.startsWith('0') && num.length <= 10) {
+    num = '225' + num.substring(1);
+  }
+  // Si le numéro est trop court (moins de 10 chiffres), ajouter 225
+  if (num.length <= 10 && !num.startsWith('225')) {
+    num = '225' + num;
+  }
+  return num;
+}
+// ═══════════════════════════════════════════════════
+
 // ═══ QR CODE - Génération locale avec fallbacks ═══
 
 // QR Code - Version intégrée locale
@@ -590,7 +609,7 @@ function vueDossier() {
   var dernierPaiementStr = dernierMoisPaye>=0 ? TOUS_MOIS()[dernierMoisPaye] : 'Aucun';
 
   // WhatsApp
-  var waLink = mFrais.tel ? '<a href="https://wa.me/'+mFrais.tel.replace(/\D/g,'')+'" target="_blank" class="btn btn-vert" style="flex:1;text-decoration:none;font-size:12px;padding:10px">📲 WhatsApp comité</a>' : '';
+  var waLink = mFrais.tel ? '<a href="https://wa.me/'+formatWANumber(mFrais.tel)+'" target="_blank" class="btn btn-vert" style="flex:1;text-decoration:none;font-size:12px;padding:10px">📲 WhatsApp comité</a>' : '';
 
   return [
     // PROFIL
@@ -928,7 +947,7 @@ function vueMaCarte() {
     // ACTIONS
     '<div style="display:flex;gap:10px">',
       '<button class="btn btn-vert" style="flex:1;font-size:13px;padding:13px" onclick="imprimerMaCarte()">&#x1F5A8; Imprimer</button>',
-      mFrais.tel ? '<a href="https://wa.me/'+mFrais.tel.replace(/\D/g,'')+'" target="_blank" class="btn btn-ghost" style="flex:1;text-decoration:none;font-size:13px;padding:13px">&#x1F4F2; WhatsApp</a>' : '',
+      mFrais.tel ? '<a href="https://wa.me/'+formatWANumber(mFrais.tel)+'" target="_blank" class="btn btn-ghost" style="flex:1;text-decoration:none;font-size:13px;padding:13px">&#x1F4F2; WhatsApp</a>' : '',
     '</div>',
     '<div style="text-align:center;color:var(--grisT);font-size:11px;margin-top:12px">Code QR valable pour scanner par le comite</div>',
   ].join('');
