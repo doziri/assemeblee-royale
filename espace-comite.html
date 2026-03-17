@@ -1046,7 +1046,76 @@ function copierMessage(){var el=document.getElementById('msg-whatsapp');if(!el)r
 function vueCartes(){if(!MEMBRES.length)return'<div class="empty-state"><div style="font-size:48px;margin-bottom:14px">&#x1F4C7;</div><div style="font-weight:800;font-size:16px;margin-bottom:8px">Aucune carte</div><button class="btn btn-primary" onclick="changerVue(\'membres\')">&#x1F465; Membres</button></div>';return['<div class="card" style="margin-bottom:14px"><div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:8px">&#x1F4C7; Cartes membres avec QR codes</div><div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap"><button class="btn btn-or" onclick="imprimerToutesCartes()" style="font-size:12px;padding:8px 14px">&#x1F5A8; Imprimer tout ('+MEMBRES.length+')</button></div><input type="text" placeholder="&#x1F50D; Rechercher..." oninput="filtrerCartes(this.value)"/></div>','<div id="cartes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">',MEMBRES.map(function(m){return renderCarte(m);}).join(''),'</div>'].join('');}
 function filtrerCartes(q){var f=MEMBRES.filter(function(m){return m.nom.toLowerCase().indexOf(q.toLowerCase())>=0||m.id.indexOf(q.toUpperCase())>=0;});var el=document.getElementById('cartes-grid');if(el){el.innerHTML=f.map(function(m){return renderCarte(m);}).join('');f.forEach(function(m){genQR(m);});}}
 function renderCarte(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p,i){return p&&i<=MOIS_COURANT();}).length;var manq=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;var strip={ajour:'linear-gradient(90deg,var(--vertD),var(--vert))',retard:'linear-gradient(90deg,var(--orD),var(--or))',inactif:'linear-gradient(90deg,var(--rougeD),var(--rouge))'};var cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var bg=p?'var(--vertD)':ec?'var(--orD)':pas?'var(--rougeD)':'#1a2a3a';var c=p?'var(--vert)':ec?'var(--or)':pas?'rgba(255,107,107,0.4)':'var(--grisT)';return'<div title="'+TOUS_MOIS()[idx]+'" style="width:13px;height:13px;border-radius:2px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-size:6px;color:'+c+';font-weight:900">'+(p?'&#x2714;':pas?'·':'')+'</div>';}).join('');var logoH=LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:36px;height:36px;border-radius:8px;object-fit:cover"/>'  :'<div style="width:36px;height:36px;border-radius:8px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:18px">⛪</div>';return['<div style="background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:16px;overflow:hidden">','<div style="height:5px;background:'+strip[s]+'"></div>','<div style="padding:16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px"><div style="flex:1;min-width:0;margin-right:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">',logoH,'<div><div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase">'+CFG.nom_eglise+' – CARTE MEMBRE</div><div style="font-weight:900;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">'+m.nom+'</div></div></div><div style="color:var(--bleu);font-size:12px;margin-top:3px">'+m.id+'</div><div style="margin-top:8px">'+badgeHTML(s)+'</div></div><div><div class="qr-wrap" id="qr-'+m.id+'" style="width:96px;height:96px;display:flex;align-items:center;justify-content:center"><div style="color:var(--grisC);font-size:10px">QR...</div></div></div></div>','<div class="grid-2" style="gap:6px;margin-bottom:12px">',[['Cotisation',fmt(m.montant)+'/mois','var(--bleu)'],['Total payé',fmt(payes*m.montant),'var(--vert)'],['Mois payés',payes+'/'+(MOIS_COURANT()+1),'var(--vert)'],['Solde dû',manq>0?fmt(manq*m.montant):'Aucun',manq>0?'var(--or)':'var(--vert)']].map(function(x){return'<div style="background:#111d2a;border-radius:8px;padding:8px 10px"><div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:700;font-size:12px;margin-top:2px">'+x[1]+'</div></div>';}).join(''),'</div>','<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:10px">'+cal+'</div>','<div style="display:flex;gap:8px"><button class="btn btn-or" style="font-size:11px;padding:6px 10px;flex:1" onclick="imprimerCarte(\''+m.id+'\')">&#x1F5A8; Imprimer</button><button class="btn btn-primary" style="font-size:11px;padding:6px 10px;flex:1" onclick="ouvrirValidation(\''+m.id+'\')">&#x2705; Valider</button></div>','</div></div>'].join('');}
-function genQR(m){if(!window.QRCode)return;var el=document.getElementById('qr-'+m.id);if(!el||el.dataset.generated)return;el.innerHTML='';el.dataset.generated='1';try{new QRCode(el,{text:'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant,width:90,height:90,colorDark:'#0a1628',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){el.innerHTML='<div style="width:90px;height:90px;background:#111;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--grisC);text-align:center;border-radius:6px">'+m.id+'</div>';}}
+function genQR(m){
+  var el=document.getElementById('qr-'+m.id);
+  if(!el||el.dataset.generated)return;
+  el.innerHTML='';
+  el.dataset.generated='1';
+  var qrText='TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant;
+  var size=90;
+  var cacheKey='qrcache_'+m.id;
+
+  // Méthode 1: QRCode.toCanvas (qrcode.js)
+  if(window.QRCode && typeof QRCode.toCanvas==='function'){
+    var canvas=document.createElement('canvas');
+    QRCode.toCanvas(canvas,qrText,{width:size,color:{dark:'#0a1628',light:'#ffffff'}},function(err){
+      if(!err){
+        el.innerHTML='';
+        el.appendChild(canvas);
+        try{localStorage.setItem(cacheKey,canvas.toDataURL());}catch(e){}
+      } else { _genQRFallback(el,qrText,size,cacheKey,m.id); }
+    });
+    return;
+  }
+
+  // Méthode 2: QRCode classique
+  if(window.QRCode && typeof QRCode==='function'){
+    try{
+      new QRCode(el,{text:qrText,width:size,height:size,colorDark:'#0a1628',colorLight:'#ffffff',correctLevel:(QRCode.CorrectLevel||{}).M||1});
+      return;
+    }catch(e){}
+  }
+
+  _genQRFallback(el,qrText,size,cacheKey,m.id);
+}
+
+function _genQRFallback(el,qrText,size,cacheKey,memberId){
+  // Cache localStorage
+  var cached=localStorage.getItem(cacheKey);
+  if(cached&&cached.length>100){
+    el.innerHTML='<img src="'+cached+'" style="width:'+size+'px;height:'+size+'px;border-radius:4px;display:block;"/>';
+    return;
+  }
+  // APIs externes en cascade
+  var apis=[
+    'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(qrText)+'&format=png&margin=1',
+    'https://quickchart.io/qr?text='+encodeURIComponent(qrText)+'&size='+size+'&dark=0a1628&light=ffffff',
+    'https://chart.googleapis.com/chart?chs='+size+'x'+size+'&cht=qr&chl='+encodeURIComponent(qrText)
+  ];
+  function tryApi(idx){
+    if(idx>=apis.length){
+      el.innerHTML='<div style="width:'+size+'px;height:'+size+'px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:9px;color:#4eff9b;text-align:center;border-radius:4px;font-weight:700;padding:2px;">'+(memberId||qrText.split('|')[1]||'QR')+'</div>';
+      return;
+    }
+    var img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=function(){
+      el.innerHTML='';
+      img.style.cssText='width:'+size+'px;height:'+size+'px;display:block;border-radius:4px;';
+      el.appendChild(img);
+      try{
+        var c=document.createElement('canvas');
+        c.width=size;c.height=size;
+        c.getContext('2d').drawImage(img,0,0,size,size);
+        localStorage.setItem(cacheKey,c.toDataURL());
+      }catch(e){}
+    };
+    img.onerror=function(){tryApi(idx+1);};
+    img.src=apis[idx];
+  }
+  tryApi(0);
+}
+
 function genererQRCodes(){if(!window.QRCode){setTimeout(genererQRCodes,500);return;}MEMBRES.forEach(function(m){genQR(m);});}
 function genCarteHTML(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p,i){return p&&i<=MOIS_COURANT();}).length;var manq=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;var colors={ajour:'#4eff9b',retard:'#ffb347',inactif:'#ff6b6b'};var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};var logoHTML=LOGO_DATA?'<img src="'+LOGO_DATA+'" class="carte-print-logo"/>'  :'<div class="carte-print-logo-placeholder">⛪</div>';var cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var bg=p?'#0d5c3a':ec?'#5c3a0d':pas?'#5c0d0d':'#1a2a3a';return'<div class="carte-print-cal-dot" style="background:'+bg+'"></div>';}).join('');var qrId='qrprint-'+m.id;return['<div class="carte-print">','<div class="carte-print-strip" style="background:'+strip[s]+'"></div>','<div class="carte-print-body">','<div class="carte-print-header">',logoHTML,'<div class="carte-print-org">'+CFG.nom_eglise+'<br/>'+CFG.nom_projet+'</div>','<div class="carte-print-qr" id="'+qrId+'"></div>','</div>','<div class="carte-print-nom">'+m.nom+'</div>','<div class="carte-print-id" style="color:#64d4ff">'+m.id+' · <span style="color:'+colors[s]+'">'+(s==='ajour'?'À jour':s==='retard'?'En retard':'Inactif')+'</span></div>','<div class="carte-print-infos"><div class="carte-print-info-box"><div class="carte-print-info-label">Cotisation</div><div class="carte-print-info-val" style="color:#64d4ff">'+fmt(m.montant)+'/mois</div></div><div class="carte-print-info-box"><div class="carte-print-info-label">Mois payés</div><div class="carte-print-info-val" style="color:#4eff9b">'+payes+'/'+(MOIS_COURANT()+1)+'</div></div><div class="carte-print-info-box"><div class="carte-print-info-label">Solde dû</div><div class="carte-print-info-val" style="color:'+(manq>0?'#ffb347':'#4eff9b')+'">'+( manq>0?fmt(manq*m.montant):'0 F')+'</div></div></div>','<div class="carte-print-cal">'+cal+'</div>','<div class="carte-print-footer">'+m.id+(m.tel?' · '+m.tel:'')+'</div>','</div>','</div>'].join('');}
 function imprimerCarte(id){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;imprimerCartes([m]);}
