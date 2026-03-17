@@ -1117,10 +1117,81 @@ function _genQRFallback(el,qrText,size,cacheKey,memberId){
 }
 
 function genererQRCodes(){if(!window.QRCode){setTimeout(genererQRCodes,500);return;}MEMBRES.forEach(function(m){genQR(m);});}
-function genCarteHTML(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p,i){return p&&i<=MOIS_COURANT();}).length;var manq=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;var colors={ajour:'#4eff9b',retard:'#ffb347',inactif:'#ff6b6b'};var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};var logoHTML=LOGO_DATA?'<img src="'+LOGO_DATA+'" class="carte-print-logo"/>'  :'<div class="carte-print-logo-placeholder">⛪</div>';var cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var bg=p?'#0d5c3a':ec?'#5c3a0d':pas?'#5c0d0d':'#1a2a3a';return'<div class="carte-print-cal-dot" style="background:'+bg+'"></div>';}).join('');var qrId='qrprint-'+m.id;return['<div class="carte-print">','<div class="carte-print-strip" style="background:'+strip[s]+'"></div>','<div class="carte-print-body">','<div class="carte-print-header">',logoHTML,'<div class="carte-print-org">'+CFG.nom_eglise+'<br/>'+CFG.nom_projet+'</div>','<div class="carte-print-qr" id="'+qrId+'"></div>','</div>','<div class="carte-print-nom">'+m.nom+'</div>','<div class="carte-print-id" style="color:#64d4ff">'+m.id+' · <span style="color:'+colors[s]+'">'+(s==='ajour'?'À jour':s==='retard'?'En retard':'Inactif')+'</span></div>','<div class="carte-print-infos"><div class="carte-print-info-box"><div class="carte-print-info-label">Cotisation</div><div class="carte-print-info-val" style="color:#64d4ff">'+fmt(m.montant)+'/mois</div></div><div class="carte-print-info-box"><div class="carte-print-info-label">Mois payés</div><div class="carte-print-info-val" style="color:#4eff9b">'+payes+'/'+(MOIS_COURANT()+1)+'</div></div><div class="carte-print-info-box"><div class="carte-print-info-label">Solde dû</div><div class="carte-print-info-val" style="color:'+(manq>0?'#ffb347':'#4eff9b')+'">'+( manq>0?fmt(manq*m.montant):'0 F')+'</div></div></div>','<div class="carte-print-cal">'+cal+'</div>','<div class="carte-print-footer">'+m.id+(m.tel?' · '+m.tel:'')+'</div>','</div>','</div>'].join('');}
+function genCarteHTML(m){
+  var s=statutMembre(m);
+  var MC=MOIS_COURANT();
+  var payes=m.paiements.filter(function(p,i){return p&&i<=MC;}).length;
+  var manq=m.paiements.filter(function(p,i){return !p&&i<=MC;}).length;
+  var colors={ajour:'#4eff9b',retard:'#ffb347',inactif:'#ff6b6b'};
+  var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
+  var logoHTML=LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:28px;height:28px;border-radius:4px;object-fit:cover"/>'
+    :'<div style="width:28px;height:28px;border-radius:4px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:14px">&#x26EA;</div>';
+  var cal=m.paiements.map(function(p,idx){
+    var ec=idx===MC,pas=idx<=MC;
+    var bg=p?'#0d5c3a':ec?'#5c3a0d':pas?'#5c0d0d':'#1a2a3a';
+    return'<div style="width:6px;height:6px;border-radius:1px;background:'+bg+';display:inline-block;margin:1px;"></div>';
+  }).join('');
+  var qrId='qrprint-'+m.id;
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2';
+
+  return [
+    '<div style="width:90mm;background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;display:inline-block;margin:3mm;vertical-align:top;page-break-inside:avoid;">',
+      '<div style="height:5px;background:'+strip[s]+'"></div>',
+      '<div style="padding:8px 10px;">',
+
+        // HEADER: logo + nom église + QR
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">',
+          '<div style="flex:1;">',
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">',
+              logoHTML,
+              '<div>',
+                '<div style="font-size:6px;color:#556677;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">'+CFG.nom_eglise+'</div>',
+                '<div style="font-size:6px;color:#445566;">'+CFG.nom_projet+'</div>',
+              '</div>',
+            '</div>',
+            '<div style="font-weight:900;font-size:13px;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">'+m.nom+'</div>',
+            '<div style="font-size:9px;color:#64d4ff;margin-top:2px;font-weight:700;">'+m.id+' &bull; <span style="color:'+colors[s]+';">'+(s==='ajour'?'&#x2714; A jour':s==='retard'?'&#x26A0; Retard':'&#x2717; Inactif')+'</span></div>',
+          '</div>',
+          // QR CODE GRAND
+          '<div style="background:white;padding:4px;border-radius:6px;flex-shrink:0;" id="'+qrId+'">',
+            '<img src="'+qrUrl+'" width="80" height="80" style="display:block;border-radius:3px;" alt="QR '+m.id+'"/>',
+          '</div>',
+        '</div>',
+
+        // STATS
+        '<div style="display:flex;gap:6px;margin-bottom:6px;">',
+          '<div style="background:rgba(255,255,255,0.05);border-radius:4px;padding:4px 6px;flex:1;">',
+            '<div style="font-size:6px;color:#556677;font-weight:700;text-transform:uppercase;">Cotisation</div>',
+            '<div style="font-size:9px;font-weight:700;color:#64d4ff;">'+fmt(m.montant)+'/mois</div>',
+          '</div>',
+          '<div style="background:rgba(255,255,255,0.05);border-radius:4px;padding:4px 6px;flex:1;">',
+            '<div style="font-size:6px;color:#556677;font-weight:700;text-transform:uppercase;">Mois payes</div>',
+            '<div style="font-size:9px;font-weight:700;color:#4eff9b;">'+payes+'/'+(MC+1)+'</div>',
+          '</div>',
+          '<div style="background:rgba(255,255,255,0.05);border-radius:4px;padding:4px 6px;flex:1;">',
+            '<div style="font-size:6px;color:#556677;font-weight:700;text-transform:uppercase;">Solde du</div>',
+            '<div style="font-size:9px;font-weight:700;color:'+(manq>0?'#ffb347':'#4eff9b')+'">'+(manq>0?fmt(manq*m.montant):'0 F')+'</div>',
+          '</div>',
+        '</div>',
+
+        // CALENDRIER
+        '<div style="margin-bottom:4px;">'+cal+'</div>',
+
+        // FOOTER
+        '<div style="font-size:7px;color:#334455;border-top:1px solid #1a3a5a;padding-top:4px;">'+m.id+(m.tel?' &bull; '+m.tel:'')+'</div>',
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
 function imprimerCarte(id){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;imprimerCartes([m]);}
 function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun membre','danger');return;}imprimerCartes(MEMBRES);}
-function imprimerCartes(liste){var zone=document.getElementById('print-zone');zone.innerHTML='<div style="padding:5mm">'+liste.map(function(m){return genCarteHTML(m);}).join('')+'</div>';setTimeout(function(){liste.forEach(function(m){var el=document.getElementById('qrprint-'+m.id);if(el&&window.QRCode){el.innerHTML='';try{new QRCode(el,{text:'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant,width:52,height:52,colorDark:'#0a1628',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}}});setTimeout(function(){window.print();},400);},100);}
+function imprimerCartes(liste){
+  var zone=document.getElementById('print-zone');
+  zone.innerHTML='<div style="padding:5mm">'+liste.map(function(m){return genCarteHTML(m);}).join('')+'</div>';
+  // Les QR codes sont déjà des images URL - attendre qu'elles chargent
+  setTimeout(function(){window.print();}, 1500);
+}
 
 // SAUVEGARDE
 function vueSauvegarde(){var aJour=MEMBRES.filter(function(m){return statutMembre(m)==='ajour';}).length;var verse=MEMBRES.reduce(function(s,m){return s+m.paiements.filter(function(p,i){return p&&i<=MOIS_COURANT();}).length*m.montant;},0);var attendu=MEMBRES.reduce(function(s,m){return s+m.montant*(MOIS_COURANT()+1);},0);return['<div class="card"><div style="color:var(--vert);font-weight:800;font-size:15px;margin-bottom:14px">&#x1F4BE; Sauvegarde & Synchronisation</div>','<div style="background:linear-gradient(135deg,#0a1e14,#0d2a1a);border:1px solid rgba(78,255,155,0.2);border-radius:12px;padding:14px;margin-bottom:14px"><div style="color:var(--vert);font-weight:700;font-size:13px;margin-bottom:8px">☁ Synchronisation Cloud (JSONBin)</div><div style="color:var(--grisC);font-size:12px;margin-bottom:10px">Données synchronisées sur tous vos appareils automatiquement.</div><button class="btn btn-primary" style="font-size:12px;padding:9px" onclick="chargerDepuisCloud().then(function(){afficherVue();notifier(\'&#x2705; Données rechargées !\');})">&#x1F504; Forcer la synchronisation</button></div>','<div style="background:#111d2a;border-radius:10px;padding:14px;margin-bottom:14px">',[['Membres',MEMBRES.length,'var(--bleu)'],['À jour',aJour,'var(--vert)'],['Encaissé',fmt(verse),'var(--vert)'],['Taux',attendu>0?Math.round(verse/attendu*100)+'%':'–','var(--bleu)']].map(function(x){return'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="color:var(--grisC);font-size:13px">'+x[0]+'</span><span style="color:'+x[2]+';font-weight:700">'+x[1]+'</span></div>';}).join(''),'</div>','<div style="display:flex;flex-direction:column;gap:10px"><button class="btn btn-primary btn-full" onclick="exporterJSON()" '+(MEMBRES.length?'':'disabled')+'>&#x1F4BE; Exporter en JSON</button><button class="btn btn-bleu btn-full" onclick="exporterCSV()" '+(MEMBRES.length?'':'disabled')+'>&#x1F4CA; Exporter en CSV</button><button class="btn btn-ghost btn-full" onclick="document.getElementById(\'import-file\').click()">&#x1F4C2; Importer depuis JSON</button><button class="btn btn-or btn-full" onclick="exporterPourMembres()">&#x1F4E4; Exporter pour l\'espace membres</button><input id="import-file" type="file" accept=".json" style="display:none"/></div></div>','<div class="card"><div style="color:var(--rouge);font-weight:800;font-size:13px;margin-bottom:12px">&#x1F5D1; Zone dangereuse</div><button class="btn btn-danger btn-full" onclick="effacerTout()" '+(MEMBRES.length?'':'disabled')+'>&#x26A0; Effacer tous les membres</button></div>'].join('');}
