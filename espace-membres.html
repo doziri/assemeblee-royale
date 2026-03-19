@@ -302,7 +302,6 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
     <button class="nav-btn active" id="nav-mondossier">👤 Mon dossier</button>
     <button class="nav-btn" id="nav-calendrier">📅 Calendrier</button>
     <button class="nav-btn" id="nav-classement">🏆 Classement</button>
-    <button class="nav-btn" id="nav-global">📊 Vue globale</button>
     <button class="nav-btn" id="nav-macarte">🪪 Ma carte</button>
   </div>
 </div>
@@ -548,7 +547,7 @@ function seDeconnecter() {
 // ══════════════════════════════════════════════════════════
 function changerVue(vue) {
   VUE_ACTUELLE = vue;
-  ['mondossier','calendrier','classement','global','macarte'].forEach(function(v){
+  ['mondossier','calendrier','classement','macarte'].forEach(function(v){
     var el = document.getElementById('nav-'+v);
     if (el) el.classList.toggle('active', v===vue);
   });
@@ -590,7 +589,7 @@ function vueDossier() {
 
   var s = statutMembre(mFrais);
   var MC = MOIS_COURANT();
-  var payes = mFrais.paiements.filter(function(p,i){ return p && i<=MC; }).length;
+  var payes = mFrais.paiements.filter(function(p,i){ return p && p!==0; }).length;
   var manq  = mFrais.paiements.filter(function(p,i){ return !p && i<=MC; }).length;
   var dette = manq * mFrais.montant;
   var verse = payes * mFrais.montant;
@@ -741,7 +740,7 @@ function vueClassement() {
 
   // Calcul scores
   var scores = MEMBRES.map(function(m){
-    var payes = m.paiements.filter(function(p,i){ return p&&i<=MC; }).length;
+    var payes = m.paiements.filter(function(p,i){ return p&&p!==0; }).length;
     var total = MC + 1;
     var taux  = total > 0 ? Math.round(payes/total*100) : 0;
     // Anonymiser : initiales seulement sauf pour le membre connecté
@@ -795,107 +794,14 @@ function anonymiserNom(nom) {
   return 'Membre #' + num;
 }
 
-function vueGlobal() {
-  var MC = MOIS_COURANT();
-  var aJour   = MEMBRES.filter(function(m){ return statutMembre(m)==='ajour'; }).length;
-  var retard  = MEMBRES.filter(function(m){ return statutMembre(m)==='retard'; }).length;
-  var inactif = MEMBRES.filter(function(m){ return statutMembre(m)==='inactif'; }).length;
 
-  var verse   = MEMBRES.reduce(function(s,m){ return s+m.paiements.filter(function(p,i){ return p&&i<=MC; }).length*m.montant; },0);
-  var attendu = MEMBRES.reduce(function(s,m){ return s+m.montant*(MC+1); },0);
-  var objectif= MEMBRES.reduce(function(s,m){ return s+m.montant*CFG.nb_mois; },0);
-  var taux    = attendu>0?Math.round(verse/attendu*100):0;
-
-  var payesCeMois = MEMBRES.filter(function(m){ return m.paiements[MC]; }).length;
-
-  // Évolution mensuelle (6 derniers mois visibles)
-  var derniersMois = [];
-  for (var i=Math.max(0,MC-5); i<=MC; i++) {
-    var cnt = MEMBRES.filter(function(m){ return m.paiements[i]; }).length;
-    var total = MEMBRES.length;
-    derniersMois.push({label: TOUS_MOIS()[i], cnt: cnt, total: total, pct: total>0?Math.round(cnt/total*100):0});
-  }
-
-  var evoHTML = derniersMois.map(function(d){
-    return '<div style="flex:1;min-width:0">'
-      +'<div style="background:var(--vertD);border-radius:4px 4px 0 0;height:'+(d.pct/2)+'px;min-height:4px;transition:height .3s"></div>'
-      +'<div style="text-align:center;font-size:8px;color:var(--grisC);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.label+'</div>'
-      +'<div style="text-align:center;font-size:10px;color:var(--vert);font-weight:700">'+d.cnt+'</div>'
-    +'</div>';
-  }).join('');
-
-  return [
-    '<div class="card-bleu">',
-      '<div style="color:var(--bleu);font-weight:800;font-size:15px;margin-bottom:4px">📊 Vue d\'ensemble</div>',
-      '<div style="color:var(--grisC);font-size:12px">'+CFG.nom_eglise+' · '+CFG.nom_projet+'</div>',
-    '</div>',
-
-    // MOIS EN COURS
-    '<div style="background:linear-gradient(135deg,#0a1e14,#0d2a1a);border:1px solid rgba(78,255,155,0.2);border-radius:14px;padding:16px;margin-bottom:14px">',
-      '<div style="color:var(--grisC);font-size:11px;font-weight:700;margin-bottom:4px">📅 '+TOUS_MOIS()[MC]+' (mois '+(MC+1)+'/'+CFG.nb_mois+')</div>',
-      '<div style="font-size:13px"><b style="color:var(--vert);font-size:22px">'+payesCeMois+'</b> <span style="color:var(--grisC)">membres ont payé ce mois ·</span> <b style="color:var(--or)">'+(MEMBRES.length-payesCeMois)+'</b> <span style="color:var(--grisC)">en attente</span></div>',
-    '</div>',
-
-    // STATS
-    '<div class="grid-2" style="margin-bottom:14px">',
-      [['Encaissé', fmt(verse), 'var(--vert)', '#0a1e14'],
-       ['Taux collecte', taux+'%', 'var(--bleu)', '#0a1428'],
-       ['À jour', aJour+' membres', 'var(--vert)', '#0a1e14'],
-       ['En retard', retard+' membres', 'var(--or)', '#1e140a']
-      ].map(function(x){
-        return '<div style="background:'+x[3]+';border:1px solid '+x[2]+'22;border-radius:12px;padding:14px">'
-          +'<div style="color:var(--grisC);font-size:10px;font-weight:700;text-transform:uppercase">'+x[0]+'</div>'
-          +'<div style="color:'+x[2]+';font-weight:900;font-size:20px;margin-top:6px">'+x[1]+'</div>'
-          +'</div>';
-      }).join(''),
-    '</div>',
-
-    // PROGRESSION GLOBALE
-    '<div class="card" style="margin-bottom:14px">',
-      '<div style="display:flex;justify-content:space-between;margin-bottom:10px">',
-        '<span style="color:var(--grisC);font-size:12px;font-weight:700;text-transform:uppercase">Progression globale</span>',
-        '<span style="color:var(--vert);font-weight:700">'+taux+'%</span>',
-      '</div>',
-      '<div class="progress-track"><div class="progress-fill" style="width:'+taux+'%"></div></div>',
-      '<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--grisC)">',
-        '<span>'+fmt(verse)+' encaissés</span>',
-        '<span>Objectif total : '+fmt(objectif)+'</span>',
-      '</div>',
-    '</div>',
-
-    // ÉVOLUTION MENSUELLE
-    '<div class="card" style="margin-bottom:14px">',
-      '<div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:14px">Collecte par mois</div>',
-      '<div style="display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:4px">'+evoHTML+'</div>',
-    '</div>',
-
-    // RÉPARTITION
-    '<div class="card">',
-      '<div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:12px">Répartition</div>',
-      [['✔ À jour', aJour, 'var(--vert)'],
-       ['⚠ En retard', retard, 'var(--or)'],
-       ['✗ Inactifs', inactif, 'var(--rouge)']
-      ].map(function(x){
-        var pct = MEMBRES.length>0?Math.round(x[1]/MEMBRES.length*100):0;
-        return '<div style="margin-bottom:10px">'
-          +'<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:'+x[2]+';font-size:12px;font-weight:600">'+x[0]+'</span><span style="color:var(--grisC);font-size:12px">'+x[1]+' ('+pct+'%)</span></div>'
-          +'<div style="background:#1a2a3a;border-radius:4px;height:8px"><div style="height:100%;background:'+x[2]+';border-radius:4px;width:'+pct+'%;transition:width .5s"></div></div>'
-        +'</div>';
-      }).join(''),
-    '</div>',
-  ].join('');
-}
-
-// ══════════════════════════════════════════════════════════
-// VUE : MA CARTE QR
-// ══════════════════════════════════════════════════════════
 function vueMaCarte() {
   var m = MEMBRE_CONNECTE;
   if (!m) return '<div class="empty-state"><div style="font-size:48px">&#x1FAA9;</div><div style="margin-top:16px;font-weight:700">Aucun membre connecte</div></div>';
   var mFrais = MEMBRES.find(function(x){ return x.id===m.id; }) || m;
   var s = statutMembre(mFrais);
   var MC = MOIS_COURANT();
-  var payes = mFrais.paiements.filter(function(p,i){ return p&&i<=MC; }).length;
+  var payes = mFrais.paiements.filter(function(p,i){ return p&&p!==0; }).length;
   var manq  = mFrais.paiements.filter(function(p,i){ return !p&&i<=MC; }).length;
   var colors = {ajour:'var(--vert)',retard:'var(--or)',inactif:'var(--rouge)'};
   var strip  = {ajour:'linear-gradient(90deg,var(--vertD),var(--vert))',retard:'linear-gradient(90deg,var(--orD),var(--or))',inactif:'linear-gradient(90deg,var(--rougeD),var(--rouge))'};
@@ -972,7 +878,7 @@ function imprimerMaCarte() {
   var mFrais = MEMBRES.find(function(x){ return x.id===m.id; }) || m;
   var s = statutMembre(mFrais);
   var MC = MOIS_COURANT();
-  var payes = mFrais.paiements.filter(function(p,i){ return p&&i<=MC; }).length;
+  var payes = mFrais.paiements.filter(function(p,i){ return p&&p!==0; }).length;
   var manq  = mFrais.paiements.filter(function(p,i){ return !p&&i<=MC; }).length;
   var strip = {ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
   var colors = {ajour:'#4eff9b',retard:'#ffb347',inactif:'#ff6b6b'};
@@ -1026,7 +932,7 @@ if('serviceWorker' in navigator) {
 }
 document.addEventListener('DOMContentLoaded', function() {
   // Navigation
-  ['mondossier','calendrier','classement','global','macarte'].forEach(function(v){
+  ['mondossier','calendrier','classement','macarte'].forEach(function(v){
     var el = document.getElementById('nav-'+v);
     if (el) el.addEventListener('click', function(){ changerVue(v); });
   });

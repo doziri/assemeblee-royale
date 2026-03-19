@@ -920,7 +920,7 @@ function exporterRapportPDF() {
 
   // Calculs statistiques
   var totalGlobal = MEMBRES.reduce(function(s,m){
-    return s + m.paiements.filter(function(p,i){return p&&i<=MC;}).length * m.montant;
+    return s + m.paiements.filter(function(p){return p&&p!==0;}).length * m.montant;
   }, 0);
   var totalAttendu = MEMBRES.reduce(function(s,m){ return s+m.montant*(MC+1); }, 0);
   var tauxGlobal = totalAttendu>0 ? Math.round(totalGlobal/totalAttendu*100) : 0;
@@ -972,7 +972,7 @@ function exporterRapportPDF() {
   // Tableau membres
   var tableauMembres = MEMBRES.map(function(m) {
     var s = statutMembre(m);
-    var payes = m.paiements.filter(function(p,i){return p&&i<=MC;}).length;
+    var payes = m.paiements.filter(function(p){return p&&p!==0;}).length;
     var manq = m.paiements.filter(function(p,i){return !p&&i<=MC;}).length;
     var dette = manq*m.montant;
     var couleurStatut = s==='ajour'?'#0d5c3a':s==='retard'?'#5c3a0d':'#5c0d0d';
@@ -1110,12 +1110,13 @@ function vueStats() {
 
   // ── Encaissements par mois de cotisation ──
   // Pour chaque mois du projet, calculer combien a été encaissé
+  // Encaissements par mois de cotisation (TOUS les mois, y compris anticipés)
   var encParMoisProjet = tousMois.map(function(label, idx) {
     var total = MEMBRES.reduce(function(s, m) {
       return s + (m.paiements[idx] ? m.montant : 0);
     }, 0);
     return { label: label, total: total, nb: MEMBRES.filter(function(m){ return m.paiements[idx]; }).length };
-  }).slice(0, MC+1); // Seulement les mois passés
+  }); // Tous les mois (inclus paiements anticipés)
 
   // ── Encaissements par mois calendaire (date réelle de paiement) ──
   // Grouper les paiements par mois/année réel où ils ont été validés
@@ -1149,11 +1150,13 @@ function vueStats() {
   var totalAttendu = MEMBRES.reduce(function(s,m){ return s+m.montant*(MC+1); },0);
   var tauxGlobal = totalAttendu>0 ? Math.round(totalGlobal/totalAttendu*100) : 0;
 
-  // ── Graphe barres: encaissements par mois projet ──
-  var maxVal = Math.max.apply(null, encParMoisProjet.map(function(m){ return m.total; })) || 1;
-  var graphBarres = encParMoisProjet.map(function(m, i) {
+  // ── Graphe barres: encaissements par mois projet (tous les mois avec paiements) ──
+  var moisAvecData = encParMoisProjet.filter(function(m,i){ return m.total>0 || i<=MC; });
+  var maxVal = Math.max.apply(null, moisAvecData.map(function(m){ return m.total; })) || 1;
+  var graphBarres = moisAvecData.map(function(m, i) {
+    var realIdx = encParMoisProjet.indexOf(m);
     var pct = Math.round(m.total/maxVal*100);
-    var isCourant = i===MC;
+    var isCourant = realIdx===MC;
     var couleur = isCourant ? 'var(--or)' : m.total===0 ? 'var(--rougeD)' : m.total/maxVal>0.8 ? 'var(--vert)' : 'var(--bleu)';
     return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;">'
       +'<div style="font-size:8px;color:var(--grisC);margin-bottom:2px;writing-mode:vertical-lr;transform:rotate(180deg);white-space:nowrap;max-height:40px;overflow:hidden;">'+m.label+'</div>'
@@ -1262,7 +1265,7 @@ function vueStats() {
             '<th style="text-align:right;padding:8px;color:var(--grisC);font-weight:700;border-bottom:1px solid var(--border)">Taux</th>',
           '</tr></thead>',
           '<tbody>',
-            encParMoisProjet.slice().reverse().map(function(m) {
+            encParMoisProjet.filter(function(m,i){return m.total>0||i<=MC;}).slice().reverse().map(function(m) {
               var taux = MEMBRES.length>0 ? Math.round(m.nb/MEMBRES.length*100) : 0;
               var couleur = taux>=80?'var(--vert)':taux>=50?'var(--or)':'var(--rouge)';
               return '<tr style="border-bottom:1px solid var(--border)">'
@@ -1466,17 +1469,23 @@ function selectionnerMoisCourant(){
 }
 
 function selectionnerNMois(n){
-  var MC=MOIS_COURANT();
-  // Uniquement les mois NON payés (retards + futurs)
-  var moisDus=MEMBRE_VALIDATION.paiements
-    .map(function(p,i){return(!p&&i<=MC)?i:-1;})
-    .filter(function(i){return i>=0;});
-  var moisFuturs=MEMBRE_VALIDATION.paiements
-    .map(function(p,i){return(!p&&i>MC)?i:-1;})
-    .filter(function(i){return i>=0;});
-  var tous=moisDus.concat(moisFuturs);
-  MOIS_SELECTIONNES=tous.slice(0,n);
-  MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);
+  // Sélectionner les N premiers mois impayés CONSÉCUTIFS à partir du premier impayé
+  var m = MEMBRE_VALIDATION;
+  if(!m) return;
+  // Trouver le premier mois impayé
+  var premier = -1;
+  for(var i=0; i<CFG.nb_mois; i++){
+    if(!m.paiements[i]){ premier = i; break; }
+  }
+  if(premier < 0){ MOIS_SELECTIONNES=[]; MONTANT_RECU=0; afficherVue(); return; }
+  // Sélectionner N mois consécutifs impayés à partir du premier
+  MOIS_SELECTIONNES = [];
+  var idx = premier;
+  while(MOIS_SELECTIONNES.length < n && idx < CFG.nb_mois){
+    if(!m.paiements[idx]) MOIS_SELECTIONNES.push(idx);
+    idx++;
+  }
+  MONTANT_RECU = MOIS_SELECTIONNES.length * m.montant;
   var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;
   afficherVue();
 }
@@ -1489,15 +1498,39 @@ function deselectionnerTout(){
 }
 
 function toggleMoisSelection(idx){
-  // Bloquer si le mois est déjà payé
-  if(MEMBRE_VALIDATION && MEMBRE_VALIDATION.paiements[idx]===1){
+  // Bloquer si le mois est deja paye
+  if(MEMBRE_VALIDATION && MEMBRE_VALIDATION.paiements[idx]){
     notifier('&#x26A0; Ce mois est deja paye !','danger');
     return;
   }
-  var i=MOIS_SELECTIONNES.indexOf(idx);
-  if(i>=0)MOIS_SELECTIONNES.splice(i,1);
-  else MOIS_SELECTIONNES.push(idx);
-  MOIS_SELECTIONNES.sort(function(a,b){return a-b;});var el=document.getElementById('mois-sel-'+idx);if(el){var sel=MOIS_SELECTIONNES.indexOf(idx)>=0,ec=idx===MOIS_COURANT();el.style.background=sel?'var(--vertD)':'#111d2a';el.style.borderColor=sel?'var(--vert)':(ec?'var(--or)':'#2a1a0d');var last=el.querySelector('div:last-child');if(last){last.style.color=sel?'var(--vert)':'#1a3a5a';last.textContent=sel?'&#x2714;':'○';}}MONTANT_RECU=MOIS_SELECTIONNES.length*(MEMBRE_VALIDATION?MEMBRE_VALIDATION.montant:0);var mr=document.getElementById('montant-recu');if(mr)mr.value=MONTANT_RECU;majRecap();}
+  var i = MOIS_SELECTIONNES.indexOf(idx);
+  if(i >= 0){
+    // Deselectionner : retirer ce mois et tous ceux apres (consécutivité)
+    MOIS_SELECTIONNES = MOIS_SELECTIONNES.filter(function(m){ return m < idx; });
+  } else {
+    // Selectionner : verifier consécutivité
+    if(MOIS_SELECTIONNES.length > 0){
+      var sorted = MOIS_SELECTIONNES.slice().sort(function(a,b){return a-b;});
+      var dernier = sorted[sorted.length-1];
+      // Trouver le prochain mois impaye apres le dernier selectionne
+      var prochainImpaye = dernier + 1;
+      while(prochainImpaye < CFG.nb_mois && MEMBRE_VALIDATION.paiements[prochainImpaye]){
+        prochainImpaye++;
+      }
+      if(idx !== prochainImpaye){
+        notifier('&#x26A0; Les mois doivent etre consecutifs !','danger');
+        return;
+      }
+    }
+    MOIS_SELECTIONNES.push(idx);
+    MOIS_SELECTIONNES.sort(function(a,b){return a-b;});
+  }
+  var nb = document.getElementById('nb-mois-sel');
+  if(nb) nb.textContent = MOIS_SELECTIONNES.length;
+  MONTANT_RECU = MOIS_SELECTIONNES.length * (MEMBRE_VALIDATION ? MEMBRE_VALIDATION.montant : 0);
+  var mr = document.getElementById('montant-recu'); if(mr) mr.value = MONTANT_RECU;
+  majRecap();
+}
 function majRecap(){var m=MEMBRE_VALIDATION;if(!m)return;var total=MOIS_SELECTIONNES.length*m.montant,recu=MONTANT_RECU;var recap=document.getElementById('recap-content'),ligne=document.getElementById('recap-ligne');if(ligne)ligne.innerHTML='<div style="display:flex;justify-content:space-between"><span style="color:var(--grisC)">Attendu :</span><span style="color:var(--or);font-weight:700">'+fmt(total)+'</span></div>'+'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--grisC)">Reçu :</span><span style="color:'+(recu>=total?'var(--vert)':'var(--rouge)')+';font-weight:700">'+fmt(recu)+'</span></div>'+(recu<total&&recu>0?'<div style="background:var(--orD);border:1px solid rgba(255,179,71,0.3);border-radius:8px;padding:7px 12px;margin-top:8px;color:var(--or);font-size:11px">&#x26A0; Reste '+fmt(total-recu)+'</div>':'');if(recap)recap.innerHTML='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Membre</span><span style="font-weight:600">'+m.nom+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Mois</span><span style="color:var(--vert);font-weight:600">'+MOIS_SELECTIONNES.length+' mois</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Périodes</span><span style="font-size:11px;color:var(--blanc)">'+MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ')+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:10px 0 0"><span style="color:var(--grisC);font-weight:700">TOTAL</span><span style="color:var(--vert);font-weight:900;font-size:18px">'+fmt(total)+'</span></div>';var btn=document.getElementById('btn-confirmer');if(btn){btn.disabled=MOIS_SELECTIONNES.length===0;btn.style.opacity=MOIS_SELECTIONNES.length===0?'0.4':'1';}}
 function confirmerValidation(){var m=MEMBRE_VALIDATION;if(!m||!MOIS_SELECTIONNES.length)return;var moisStr=MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ');journaliser('PAIEMENT VALIDÉ',m.nom+' – '+moisStr+' – '+fmt(MOIS_SELECTIONNES.length*m.montant));var now=new Date();MOIS_SELECTIONNES.forEach(function(idx){
     var mb=MEMBRES.find(function(x){return x.id===m.id;});
