@@ -331,6 +331,21 @@ async function jsonbinGet() {
           if (data.membres && !Array.isArray(data.membres)) {
             data.membres = Object.values(data.membres);
           }
+          // Normaliser les paiements de chaque membre
+          // Firebase convertit les tableaux en objets {0:val, 1:val}
+          if (data.membres) {
+            data.membres.forEach(function(m) {
+              if (m.paiements && !Array.isArray(m.paiements)) {
+                var nb = (data.cfg && data.cfg.nb_mois) || 36;
+                var arr = Array(nb).fill(0);
+                Object.keys(m.paiements).forEach(function(k) {
+                  var i = parseInt(k);
+                  if (!isNaN(i) && i < nb) arr[i] = m.paiements[k] || 0;
+                });
+                m.paiements = arr;
+              }
+            });
+          }
           if (data.montants && !Array.isArray(data.montants)) {
             data.montants = Object.values(data.montants);
           }
