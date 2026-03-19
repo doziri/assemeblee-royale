@@ -390,9 +390,11 @@ function TOUS_MOIS(){return getTousMois();}
 function MOIS_COURANT(){return getMoisCourantIdx();}
 
 function statutMembre(m){
-  var p=m.paiements.slice(0,MOIS_COURANT()+1).reduce(function(a,b){return a+b;},0);
-  if(p===MOIS_COURANT()+1) return 'ajour';
-  if(p===0) return 'inactif';
+  var MC = MOIS_COURANT();
+  // Compter les mois payés jusqu'au mois courant (pas les anticipés)
+  var payes = m.paiements.slice(0, MC+1).filter(function(p){ return p && p!==0; }).length;
+  if(payes === MC+1) return 'ajour';
+  if(payes === 0) return 'inactif';
   return 'retard';
 }
 function badgeHTML(s){
