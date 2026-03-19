@@ -593,7 +593,7 @@ function vueDossier() {
   var manq  = mFrais.paiements.filter(function(p,i){ return !p && i<=MC; }).length;
   var dette = manq * mFrais.montant;
   var verse = payes * mFrais.montant;
-  var taux  = MC>=0 ? Math.round(payes/(MC+1)*100) : 0;
+  var taux  = CFG.nb_mois>0 ? Math.round(payes/CFG.nb_mois*100) : 0;
   var totalAttendu = mFrais.montant * CFG.nb_mois;
 
   // Message personnalisé
@@ -683,7 +683,7 @@ function vueCalendrier() {
   var MC = MOIS_COURANT();
 
   var payes=0, manq=0;
-  mFrais.paiements.forEach(function(p,i){ if(i<=MC){ if(p) payes++; else manq++; }});
+  mFrais.paiements.forEach(function(p,i){ if(p&&p!==0) payes++; else if(!p&&i<=MC) manq++; });
 
   var cal = mFrais.paiements.map(function(p,idx){
     var ec = idx===MC, pas = idx<=MC;
@@ -741,7 +741,7 @@ function vueClassement() {
   // Calcul scores
   var scores = MEMBRES.map(function(m){
     var payes = m.paiements.filter(function(p,i){ return p&&p!==0; }).length;
-    var total = MC + 1;
+    var total = CFG.nb_mois;
     var taux  = total > 0 ? Math.round(payes/total*100) : 0;
     // Anonymiser : initiales seulement sauf pour le membre connecté
     var estMoi = MEMBRE_CONNECTE && m.id===MEMBRE_CONNECTE.id;
