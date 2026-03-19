@@ -703,11 +703,13 @@ function vueCalendrier() {
 
   var cal = mFrais.paiements.map(function(p,idx){
     var ec = idx===MC, pas = idx<=MC;
-    var cls = p?'cal-paye':ec?'cal-encours':pas?'cal-impaye':'cal-futur';
+    // p payé (même futur) → vert, sinon logique normale
+    var cls = (p&&p!==0)?'cal-paye':ec?'cal-encours':pas?'cal-impaye':'cal-futur';
+    var check = (p&&p!==0)?'✔':ec?'●':pas?'✗':'·';
     var lbl = MOIS_NOMS[(CFG.mois_debut+idx)%12].slice(0,3)+' '+(CFG.annee_debut+Math.floor((CFG.mois_debut+idx)/12)).toString().slice(2);
     return '<div class="cal-cell '+cls+'" title="'+TOUS_MOIS()[idx]+'">'
       +'<span class="cal-cell-label">'+lbl+'</span>'
-      +'<span class="cal-cell-check">'+(p?'✔':ec?'●':pas?'✗':'·')+'</span>'
+      +'<span class="cal-cell-check">'+check+'</span>'
       +'</div>';
   }).join('');
 
