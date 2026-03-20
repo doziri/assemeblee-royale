@@ -893,93 +893,178 @@ function genererQRCodeFallback(el, mFrais, qrText) {
   afficherQRFallback(el, qrText, 94);
 }
 
+function genCarteMembreHTML(m){
+  var MC=MOIS_COURANT();
+  var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
+  var s=statutMembre(m);
+  var logoHTML=LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:28px;height:28px;border-radius:4px;object-fit:cover"/>'
+    :'<div style="width:28px;height:28px;border-radius:4px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:14px">&#x26EA;</div>';
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=90x90&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2';
+
+  // Calendrier cochable : une case par mois
+  var tousMois=TOUS_MOIS();
+  var calRows='';
+  // 3 colonnes x n lignes
+  for(var i=0;i<CFG.nb_mois;i+=3){
+    calRows+='<tr>';
+    for(var j=i;j<Math.min(i+3,CFG.nb_mois);j++){
+      var paye=(m.paiements[j]&&m.paiements[j]!==0)?'&#x2713;':'';
+      var bg=(m.paiements[j]&&m.paiements[j]!==0)?'#0d5c3a':'#ffffff';
+      var color=(m.paiements[j]&&m.paiements[j]!==0)?'#4eff9b':'#000000';
+      calRows+='<td style="border:1px solid #334455;padding:2px 4px;font-size:6px;color:#556677;white-space:nowrap;width:33%;">'
+        +'<span style="display:inline-block;width:10px;height:10px;border:1px solid #556677;background:'+bg+';vertical-align:middle;border-radius:2px;text-align:center;line-height:10px;font-size:8px;color:'+color+';">'+paye+'</span>'
+        +' '+tousMois[j]
+      +'</td>';
+    }
+    // Remplir si dernière ligne incomplète
+    for(var k=CFG.nb_mois%3;k>0&&k<3&&i+3>CFG.nb_mois;k++){
+      calRows+='<td style="border:1px solid #334455;"></td>';
+    }
+    calRows+='</tr>';
+  }
+
+  return [
+    '<div style="width:90mm;background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;display:inline-block;margin:3mm;vertical-align:top;page-break-inside:avoid;">',
+      '<div style="height:5px;background:'+strip[s]+'"></div>',
+      '<div style="padding:8px 10px;">',
+
+        // HEADER: logo + nom + QR
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">',
+          '<div style="flex:1;">',
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">',
+              logoHTML,
+              '<div>',
+                '<div style="font-size:6px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">'+CFG.nom_eglise+'</div>',
+                '<div style="font-size:6px;color:#556677;">'+CFG.nom_projet+'</div>',
+              '</div>',
+            '</div>',
+            '<div style="font-weight:900;font-size:13px;color:#ddeeff;margin-bottom:3px;">'+m.nom+'</div>',
+            '<div style="font-size:9px;color:#64d4ff;font-weight:700;font-family:monospace;">'+m.id+'</div>',
+            '<div style="font-size:8px;color:#8899aa;margin-top:3px;">Cotisation : <b style="color:#ffb347;">'+fmt(m.montant)+'/mois</b></div>',
+            m.tel?'<div style="font-size:7px;color:#556677;margin-top:2px;">'+m.tel+'</div>':'',
+          '</div>',
+          // QR CODE
+          '<div style="background:white;padding:4px;border-radius:6px;flex-shrink:0;">',
+            '<img src="'+qrUrl+'" width="90" height="90" style="display:block;" alt="QR '+m.id+'"/>',
+          '</div>',
+        '</div>',
+
+        // CALENDRIER COCHABLE
+        '<div style="border-top:1px solid #1a3a5a;padding-top:6px;">',
+          '<div style="font-size:7px;color:#8899aa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Calendrier des cotisations</div>',
+          '<table style="width:100%;border-collapse:collapse;font-size:7px;">',
+            calRows,
+          '</table>',
+        '</div>',
+
+        // FOOTER
+        '<div style="font-size:6px;color:#334455;border-top:1px solid #1a3a5a;padding-top:4px;margin-top:6px;">',
+          'Carte valide pour la periode '+TOUS_MOIS()[0]+' - '+TOUS_MOIS()[CFG.nb_mois-1],
+        '</div>',
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
 function imprimerMaCarte() {
   var m = MEMBRE_CONNECTE;
   if (!m) return;
   var mFrais = MEMBRES.find(function(x){ return x.id===m.id; }) || m;
-  var s = statutMembre(mFrais);
-  var MC = MOIS_COURANT();
-  var payes = mFrais.paiements.filter(function(p,i){ return p&&p!==0; }).length;
-  var manq  = mFrais.paiements.filter(function(p,i){ return !p&&i<=MC; }).length;
-  var strip = {ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
-  var colors = {ajour:'#4eff9b',retard:'#ffb347',inactif:'#ff6b6b'};
-  var logoH = LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:4px;object-fit:cover"/>'
-    :'<div style="width:22px;height:22px;border-radius:4px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:12px">⛪</div>';
-  var cal = mFrais.paiements.map(function(p,idx){
-    var ec=idx===MC,pas=idx<=MC;
-    return '<div style="width:5px;height:5px;border-radius:1px;background:'+(p?'#0d5c3a':ec?'#5c3a0d':pas?'#5c0d0d':'#1a2a3a')+'"></div>';
-  }).join('');
-  var qrId = 'qrprint-macarte';
-  var html = '<div style="width:85mm;height:54mm;background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:8px;overflow:hidden;font-family:Segoe UI,sans-serif;display:inline-block">'
-    +'<div style="height:4px;background:'+strip[s]+'"></div>'
-    +'<div style="padding:6px 8px">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">'
-        +logoH
-        +'<div style="font-size:6px;color:#334455;font-weight:700;text-transform:uppercase;flex:1;margin:0 4px;padding-top:4px">'+CFG.nom_eglise+'<br/>'+CFG.nom_projet+'</div>'
-        +'<div id="'+qrId+'" style="background:white;padding:3px;border-radius:4px"></div>'
-      +'</div>'
-      +'<div style="font-weight:900;font-size:11px;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">'+mFrais.nom+'</div>'
-      +'<div style="font-size:8px;color:#64d4ff;margin-bottom:4px">'+mFrais.id+' · <span style="color:'+colors[s]+'">'+(s==='ajour'?'À jour':s==='retard'?'En retard':'Inactif')+'</span></div>'
-      +'<div style="display:flex;gap:4px;margin-bottom:3px">'
-        +'<div style="background:rgba(255,255,255,0.05);border-radius:3px;padding:2px 4px;flex:1"><div style="font-size:5px;color:#556677;font-weight:700;text-transform:uppercase">Cotisation</div><div style="font-size:7px;font-weight:700;color:#64d4ff">'+fmt(mFrais.montant)+'/mois</div></div>'
-        +'<div style="background:rgba(255,255,255,0.05);border-radius:3px;padding:2px 4px;flex:1"><div style="font-size:5px;color:#556677;font-weight:700;text-transform:uppercase">Mois payés</div><div style="font-size:7px;font-weight:700;color:#4eff9b">'+payes+'/'+(MC+1)+'</div></div>'
-        +'<div style="background:rgba(255,255,255,0.05);border-radius:3px;padding:2px 4px;flex:1"><div style="font-size:5px;color:#556677;font-weight:700;text-transform:uppercase">Solde dû</div><div style="font-size:7px;font-weight:700;color:'+(manq>0?'#ffb347':'#4eff9b')+'">'+(manq>0?fmt(manq*mFrais.montant):'0 F')+'</div></div>'
-      +'</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:1px;margin-top:2px">'+cal+'</div>'
-      +'<div style="font-size:6px;color:#334455;margin-top:3px;padding-top:2px;border-top:1px solid #1a3a5a">'+mFrais.id+(mFrais.tel?' · '+mFrais.tel:'')+'</div>'
-    +'</div>'
-  +'</div>';
-
+  
+  // Générer le même HTML que l'espace comité
+  var html = genCarteMembreHTML(mFrais);
+  
   var zone = document.getElementById('print-zone');
-  zone.innerHTML = '<div style="padding:5mm">'+html+'</div>';
-  setTimeout(function(){
-    var el = document.getElementById(qrId);
-    if (el && window.QRCode) {
-      el.innerHTML='';
-      try { new QRCode(el,{text:'TEMPLE|'+mFrais.id+'|'+mFrais.nom+'|'+mFrais.montant,width:52,height:52,colorDark:'#0a1628',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M}); }
-      catch(e){}
-    }
-    setTimeout(function(){ window.print(); }, 400);
-  }, 100);
-}
-
-// ══════════════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════════════
-if('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
-  });
-}
-document.addEventListener('DOMContentLoaded', function() {
-  // Navigation
-  ['mondossier','calendrier','classement','macarte'].forEach(function(v){
-    var el = document.getElementById('nav-'+v);
-    if (el) el.addEventListener('click', function(){ changerVue(v); });
-  });
-
-  // Login
-  document.getElementById('login-code').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('login-tel').focus(); });
-  document.getElementById('login-tel').addEventListener('keydown',  function(e){ if(e.key==='Enter') tentativeConnexionMembre(); });
-  document.getElementById('login-code').addEventListener('input',   function(){ this.value=this.value.toUpperCase(); });
-
-  LOGO_DATA = LOGO_DATA_DEFAULT;
-  mettreAJourLogoUI();
-  // Charger données cloud en arrière-plan au démarrage
-  chargerDepuisCloud();
-
-  // Restaurer session
-  var sess = sessionStorage.getItem('membre_session');
-  if (sess) {
-    try {
-      var data = JSON.parse(sess);
-      chargerDepuisCloud().then(function(){
-        var m = MEMBRES.find(function(x){ return x.id===data.id; });
-        if (m) { MEMBRE_CONNECTE = m; MODE_DECOUVERTE = false; ouvrirEspace(); }
-      });
-    } catch(e) { sessionStorage.removeItem('membre_session'); }
+  if (!zone) {
+    zone = document.createElement('div');
+    zone.id = 'print-zone';
+    zone.style.display = 'none';
+    document.body.appendChild(zone);
   }
-});
+  zone.innerHTML = '<div style="padding:5mm">' + html + '</div>';
+  
+  // Attendre que le QR se charge
+  setTimeout(function(){ window.print(); }, 1500);
+}
+
+
+
+function genCarteMembreHTML(m){
+  var MC=MOIS_COURANT();
+  var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
+  var s=statutMembre(m);
+  var logoHTML=LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:28px;height:28px;border-radius:4px;object-fit:cover"/>'
+    :'<div style="width:28px;height:28px;border-radius:4px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:14px">&#x26EA;</div>';
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=90x90&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2';
+
+  // Calendrier cochable : une case par mois
+  var tousMois=TOUS_MOIS();
+  var calRows='';
+  // 3 colonnes x n lignes
+  for(var i=0;i<CFG.nb_mois;i+=3){
+    calRows+='<tr>';
+    for(var j=i;j<Math.min(i+3,CFG.nb_mois);j++){
+      var paye=(m.paiements[j]&&m.paiements[j]!==0)?'&#x2713;':'';
+      var bg=(m.paiements[j]&&m.paiements[j]!==0)?'#0d5c3a':'#ffffff';
+      var color=(m.paiements[j]&&m.paiements[j]!==0)?'#4eff9b':'#000000';
+      calRows+='<td style="border:1px solid #334455;padding:2px 4px;font-size:6px;color:#556677;white-space:nowrap;width:33%;">'
+        +'<span style="display:inline-block;width:10px;height:10px;border:1px solid #556677;background:'+bg+';vertical-align:middle;border-radius:2px;text-align:center;line-height:10px;font-size:8px;color:'+color+';">'+paye+'</span>'
+        +' '+tousMois[j]
+      +'</td>';
+    }
+    // Remplir si dernière ligne incomplète
+    for(var k=CFG.nb_mois%3;k>0&&k<3&&i+3>CFG.nb_mois;k++){
+      calRows+='<td style="border:1px solid #334455;"></td>';
+    }
+    calRows+='</tr>';
+  }
+
+  return [
+    '<div style="width:90mm;background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;display:inline-block;margin:3mm;vertical-align:top;page-break-inside:avoid;">',
+      '<div style="height:5px;background:'+strip[s]+'"></div>',
+      '<div style="padding:8px 10px;">',
+
+        // HEADER: logo + nom + QR
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">',
+          '<div style="flex:1;">',
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">',
+              logoHTML,
+              '<div>',
+                '<div style="font-size:6px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">'+CFG.nom_eglise+'</div>',
+                '<div style="font-size:6px;color:#556677;">'+CFG.nom_projet+'</div>',
+              '</div>',
+            '</div>',
+            '<div style="font-weight:900;font-size:13px;color:#ddeeff;margin-bottom:3px;">'+m.nom+'</div>',
+            '<div style="font-size:9px;color:#64d4ff;font-weight:700;font-family:monospace;">'+m.id+'</div>',
+            '<div style="font-size:8px;color:#8899aa;margin-top:3px;">Cotisation : <b style="color:#ffb347;">'+fmt(m.montant)+'/mois</b></div>',
+            m.tel?'<div style="font-size:7px;color:#556677;margin-top:2px;">'+m.tel+'</div>':'',
+          '</div>',
+          // QR CODE
+          '<div style="background:white;padding:4px;border-radius:6px;flex-shrink:0;">',
+            '<img src="'+qrUrl+'" width="90" height="90" style="display:block;" alt="QR '+m.id+'"/>',
+          '</div>',
+        '</div>',
+
+        // CALENDRIER COCHABLE
+        '<div style="border-top:1px solid #1a3a5a;padding-top:6px;">',
+          '<div style="font-size:7px;color:#8899aa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Calendrier des cotisations</div>',
+          '<table style="width:100%;border-collapse:collapse;font-size:7px;">',
+            calRows,
+          '</table>',
+        '</div>',
+
+        // FOOTER
+        '<div style="font-size:6px;color:#334455;border-top:1px solid #1a3a5a;padding-top:4px;margin-top:6px;">',
+          'Carte valide pour la periode '+TOUS_MOIS()[0]+' - '+TOUS_MOIS()[CFG.nb_mois-1],
+        '</div>',
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
+function imprimerCarte(id){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;imprimerCartes([m]);}
+function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun membre','danger');return;}imprimerCartes(MEMBRES);}
+
 </script>
 </body>
 </html>
