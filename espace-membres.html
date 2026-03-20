@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0"/>
 <title>⛪ Temple – Espace Membres</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script>
@@ -529,6 +529,8 @@ function ouvrirEspace() {
   } else {
     changerVue('mondossier');
   }
+  // Attacher les event listeners des boutons de navigation
+  attacherNavBtns();
 }
 
 function mettreAJourBarreMembre() {
@@ -1064,6 +1066,45 @@ function genCarteMembreHTML(m){
 
 function imprimerCarte(id){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;imprimerCartes([m]);}
 function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun membre','danger');return;}imprimerCartes(MEMBRES);}
+
+// ══ INIT ══
+function ouvrirApp() {
+  document.getElementById('ecran-login') && (document.getElementById('ecran-login').style.display = 'none');
+  document.getElementById('ecran-app') && (document.getElementById('ecran-app').style.display = 'block');
+  chargerDepuisCloud().then(function(){ changerVue('mondossier'); }).catch(function(){ changerVue('mondossier'); });
+}
+
+// Attacher les boutons nav
+function attacherNavBtns() {
+  ['mondossier','calendrier','classement','macarte'].forEach(function(v) {
+    var el = document.getElementById('nav-'+v);
+    if (el) el.onclick = function(){ changerVue(v); };
+  });
+}
+
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  charger(); chargerLogo();
+  attacherNavBtns();
+  
+  var sess = sessionStorage.getItem('temple_session_membre');
+  if (sess) {
+    try {
+      var data = JSON.parse(sess);
+      MEMBRE_CONNECTE = data;
+      chargerDepuisCloud().then(function(){ ouvrirEspace(); }).catch(function(){ ouvrirEspace(); });
+    } catch(e) {
+      sessionStorage.removeItem('temple_session_membre');
+    }
+  } else {
+    chargerDepuisCloud().catch(function(){});
+  }
+});
 
 </script>
 </body>
