@@ -911,7 +911,7 @@ function vueMembers(){if(!MEMBRES.length)return['<div class="empty-state">','<di
 function filtrerParStatut(f){FILTRE_STATUT=f;['tous','ajour','retard','inactif'].forEach(function(s){var b=document.getElementById('filtre-'+s);if(b){b.className='btn '+(s===f?'btn-primary':'btn-ghost');b.style.cssText='padding:7px 12px;font-size:11px;white-space:nowrap';}});filtrerMembres();}
 function filtrerMembres(){var q=(document.getElementById('search-input')?document.getElementById('search-input').value:'').toLowerCase();var filtered=MEMBRES.filter(function(m){return(m.nom.toLowerCase().indexOf(q)>=0||m.id.indexOf(q.toUpperCase())>=0)&&(FILTRE_STATUT==='tous'||statutMembre(m)===FILTRE_STATUT);});var el=document.getElementById('liste-membres');if(el)el.innerHTML=renderListeMembres(filtered);var cnt=document.getElementById('filtre-count');if(cnt)cnt.textContent=filtered.length+' membre'+(filtered.length!==1?'s':'')+' affiché'+(filtered.length!==1?'s':'');}
 function renderListeMembres(liste){if(!liste.length)return'<div style="text-align:center;color:var(--grisC);padding:32px;font-size:13px">Aucun membre trouvé</div>';return liste.map(function(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p,i){return p&&p!==0;}).length;var manq=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;var dette=manq*m.montant,exp=MEMBRES_EXPANDED[m.id];var cal='';if(exp){cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var cls=p?'cal-paye':ec?'cal-encours':pas?'cal-impaye':'cal-futur';var lbl=MOIS_NOMS[idx%12].slice(0,1)+(CFG.annee_debut+Math.floor((CFG.mois_debut+idx)/12)).toString().slice(2);return'<div class="cal-cell '+cls+'" title="'+TOUS_MOIS()[idx]+'" onclick="togglePaiement(\''+m.id+'\','+idx+')">'+'<span class="cal-cell-label">'+lbl+'</span>'+'<span class="cal-cell-check">'+(p?'&#x2714;':pas?'&#x2717;':'·')+'</span></div>';}).join('');}
-  return['<div class="membre-card" id="card-'+m.id+'">','<div class="membre-header" onclick="toggleMembre(\''+m.id+'\')">',avatarHTML(m.nom,s),'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nom+'</div><div style="font-size:11px;color:var(--grisC);margin-top:2px">'+m.id+' · '+fmt(m.montant)+'/mois'+(dette>0?' · <span style="color:var(--or)">dette: '+fmt(dette)+'</span>':'')+'</div></div>','<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">',badgeHTML(s),'<span style="color:var(--grisC);font-size:18px">'+(exp?'&#8964;':'&rsaquo;')+'</span>','</div>','</div>',exp?['<div class="membre-detail">','<div class="grid-3" style="margin:12px 0">',[['Payés',payes+'/'+(MOIS_COURANT()+1),'var(--vert)'],['Manquants',manq,'var(--or)'],['Versé',fmt(payes*m.montant),'var(--bleu)']].map(function(x){return'<div style="background:#111d2a;border-radius:10px;padding:10px;text-align:center"><div style="color:var(--grisC);font-size:9px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:800;font-size:14px;margin-top:4px">'+x[1]+'</div></div>';}).join(''),'</div>','<div style="color:var(--grisC);font-size:10px;font-weight:700;margin-bottom:8px">CALENDRIER</div>','<div style="display:flex;flex-wrap:wrap;gap:3px">'+cal+'</div>','<div class="sep"></div>','<div style="display:flex;gap:8px;flex-wrap:wrap">','<button class="btn btn-bleu" style="font-size:12px;padding:7px 12px" onclick="ouvrirFormulaire(\''+m.id+'\')">&#x270F; Modifier</button>','<button class="btn btn-primary" style="font-size:12px;padding:7px 12px" onclick="ouvrirValidation(\''+m.id+'\')">&#x2705; Valider paiement</button>','<button class="btn btn-or" style="font-size:12px;padding:7px 12px" onclick="imprimerCarte(\''+m.id+'\')">&#x1F5A8; Imprimer</button>','<button class="btn btn-danger" style="font-size:12px;padding:7px 12px" onclick="demanderSuppression(\''+m.id+'\')">&#x1F5D1; Supprimer</button>',(m.tel?'<a href="https://wa.me/'+m.tel.replace(/\D/g,'')+'" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:7px 12px;text-decoration:none">&#x1F4F2; WhatsApp</a>':''),'</div>','</div>'].join(''):'',' </div>'].join('');}).join('');}
+  return['<div class="membre-card" id="card-'+m.id+'">','<div class="membre-header" onclick="toggleMembre(\''+m.id+'\')">',avatarHTML(m.nom,s),'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nom+'</div><div style="font-size:11px;color:var(--grisC);margin-top:2px">'+m.id+' · '+fmt(m.montant)+'/mois'+(dette>0?' · <span style="color:var(--or)">dette: '+fmt(dette)+'</span>':'')+'</div></div>','<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">',badgeHTML(s),'<span style="color:var(--grisC);font-size:18px">'+(exp?'&#8964;':'&rsaquo;')+'</span>','</div>','</div>',exp?['<div class="membre-detail">','<div class="grid-3" style="margin:12px 0">',[['Payés',payes+'/'+(MOIS_COURANT()+1),'var(--vert)'],['Manquants',manq,'var(--or)'],['Versé',fmt(payes*m.montant),'var(--bleu)']].map(function(x){return'<div style="background:#111d2a;border-radius:10px;padding:10px;text-align:center"><div style="color:var(--grisC);font-size:9px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:800;font-size:14px;margin-top:4px">'+x[1]+'</div></div>';}).join(''),'</div>','<div style="color:var(--grisC);font-size:10px;font-weight:700;margin-bottom:8px">CALENDRIER</div>','<div style="display:flex;flex-wrap:wrap;gap:3px">'+cal+'</div>','<div class="sep"></div>','<div style="display:flex;gap:8px;flex-wrap:wrap">','<button class="btn btn-bleu" style="font-size:12px;padding:7px 12px" onclick="ouvrirFormulaire(\''+m.id+'\')">&#x270F; Modifier</button>','<button class="btn btn-primary" style="font-size:12px;padding:7px 12px" onclick="ouvrirValidation(\''+m.id+'\')">&#x2705; Valider paiement</button>','<button class="btn btn-or" style="font-size:12px;padding:7px 12px" onclick="imprimerCarte(\''+m.id+'\')">&#x1F5A8; A4</button>','<button class="btn btn-primary" style="font-size:12px;padding:7px 12px" onclick="imprimerCartePVC(\''+m.id+'\')">&#x1F4B3; PVC</button>','<button class="btn btn-danger" style="font-size:12px;padding:7px 12px" onclick="demanderSuppression(\''+m.id+'\')">&#x1F5D1; Supprimer</button>',(m.tel?'<a href="https://wa.me/'+m.tel.replace(/\D/g,'')+'" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:7px 12px;text-decoration:none">&#x1F4F2; WhatsApp</a>':''),'</div>','</div>'].join(''):'',' </div>'].join('');}).join('');}
 function toggleMembre(id){MEMBRES_EXPANDED[id]=!MEMBRES_EXPANDED[id];filtrerMembres();}
 function togglePaiement(id,idx){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;m.paiements[idx]=m.paiements[idx]?0:Date.now();sauvegarder();sauvegarderCloud(true);mettreAJourHeader();filtrerMembres();}
 
@@ -1560,9 +1560,10 @@ function genererQRRecu(){var r=RECU_COURANT;if(!r||!window.QRCode)return;var c=d
 function copierMessage(){var el=document.getElementById('msg-whatsapp');if(!el)return;navigator.clipboard.writeText(el.textContent).catch(function(){});var ok=document.getElementById('copie-ok');if(ok){ok.style.display='block';setTimeout(function(){ok.style.display='none';},2500);}}
 
 // CARTES QR
-function vueCartes(){if(!MEMBRES.length)return'<div class="empty-state"><div style="font-size:48px;margin-bottom:14px">&#x1F4C7;</div><div style="font-weight:800;font-size:16px;margin-bottom:8px">Aucune carte</div><button class="btn btn-primary" onclick="changerVue(\'membres\')">&#x1F465; Membres</button></div>';return['<div class="card" style="margin-bottom:14px"><div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:8px">&#x1F4C7; Cartes membres avec QR codes</div><div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap"><button class="btn btn-or" onclick="imprimerToutesCartes()" style="font-size:12px;padding:8px 14px">&#x1F5A8; Imprimer tout ('+MEMBRES.length+')</button></div><input type="text" placeholder="&#x1F50D; Rechercher..." oninput="filtrerCartes(this.value)"/></div>','<div id="cartes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">',MEMBRES.map(function(m){return renderCarte(m);}).join(''),'</div>'].join('');}
+function vueCartes(){if(!MEMBRES.length)return'<div class="empty-state"><div style="font-size:48px;margin-bottom:14px">&#x1F4C7;</div><div style="font-weight:800;font-size:16px;margin-bottom:8px">Aucune carte</div><button class="btn btn-primary" onclick="changerVue(\'membres\')">&#x1F465; Membres</button></div>';return['<div class="card" style="margin-bottom:14px"><div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:8px">&#x1F4C7; Cartes membres avec QR codes</div><div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap"><button class="btn btn-or" onclick="imprimerToutesCartes()" style="font-size:12px;padding:8px 14px">&#x1F5A8; Imprimer A4 ('+MEMBRES.length+')</button>'+'<button class="btn btn-primary" onclick="imprimerToutesPVC()" style="font-size:12px;padding:8px 14px">&#x1F4B3; Cartes PVC ('+MEMBRES.length+')</button>'
++'<button class="btn btn-bleu" style="font-size:12px;padding:8px 14px" onclick="imprimerToutesPVC()">&#x1F4B3; PVC tout ('+MEMBRES.length+')</button></div><input type="text" placeholder="&#x1F50D; Rechercher..." oninput="filtrerCartes(this.value)"/></div>','<div id="cartes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">',MEMBRES.map(function(m){return renderCarte(m);}).join(''),'</div>'].join('');}
 function filtrerCartes(q){var f=MEMBRES.filter(function(m){return m.nom.toLowerCase().indexOf(q.toLowerCase())>=0||m.id.indexOf(q.toUpperCase())>=0;});var el=document.getElementById('cartes-grid');if(el){el.innerHTML=f.map(function(m){return renderCarte(m);}).join('');f.forEach(function(m){genQR(m);});}}
-function renderCarte(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p,i){return p&&p!==0;}).length;var manq=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;var strip={ajour:'linear-gradient(90deg,var(--vertD),var(--vert))',retard:'linear-gradient(90deg,var(--orD),var(--or))',inactif:'linear-gradient(90deg,var(--rougeD),var(--rouge))'};var cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var paye=(p&&p!==0);var bg=paye?'var(--vertD)':ec?'var(--orD)':pas?'var(--rougeD)':'#1a2a3a';var c=paye?'var(--vert)':ec?'var(--or)':pas?'rgba(255,107,107,0.4)':'var(--grisT)';return'<div title="'+TOUS_MOIS()[idx]+'" style="width:13px;height:13px;border-radius:2px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-size:6px;color:'+c+';font-weight:900">'+(p?'&#x2714;':pas?'·':'')+'</div>';}).join('');var logoH=LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:36px;height:36px;border-radius:8px;object-fit:cover"/>'  :'<div style="width:36px;height:36px;border-radius:8px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:18px">⛪</div>';return['<div style="background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:16px;overflow:hidden">','<div style="height:5px;background:'+strip[s]+'"></div>','<div style="padding:16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px"><div style="flex:1;min-width:0;margin-right:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">',logoH,'<div><div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase">'+CFG.nom_eglise+' – CARTE MEMBRE</div><div style="font-weight:900;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">'+m.nom+'</div></div></div><div style="color:var(--bleu);font-size:12px;margin-top:3px">'+m.id+'</div><div style="margin-top:8px">'+badgeHTML(s)+'</div></div><div><div class="qr-wrap" id="qr-'+m.id+'" style="width:96px;height:96px;display:flex;align-items:center;justify-content:center"><div style="color:var(--grisC);font-size:10px">QR...</div></div></div></div>','<div class="grid-2" style="gap:6px;margin-bottom:12px">',[['Cotisation',fmt(m.montant)+'/mois','var(--bleu)'],['Total payé',fmt(payes*m.montant),'var(--vert)'],['Mois payés',payes+'/'+(MOIS_COURANT()+1),'var(--vert)'],['Solde dû',manq>0?fmt(manq*m.montant):'Aucun',manq>0?'var(--or)':'var(--vert)']].map(function(x){return'<div style="background:#111d2a;border-radius:8px;padding:8px 10px"><div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:700;font-size:12px;margin-top:2px">'+x[1]+'</div></div>';}).join(''),'</div>','<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:10px">'+cal+'</div>','<div style="display:flex;gap:8px"><button class="btn btn-or" style="font-size:11px;padding:6px 10px;flex:1" onclick="imprimerCarte(\''+m.id+'\')">&#x1F5A8; Imprimer</button><button class="btn btn-primary" style="font-size:11px;padding:6px 10px;flex:1" onclick="ouvrirValidation(\''+m.id+'\')">&#x2705; Valider</button></div>','</div></div>'].join('');}
+function renderCarte(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p,i){return p&&p!==0;}).length;var manq=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;var strip={ajour:'linear-gradient(90deg,var(--vertD),var(--vert))',retard:'linear-gradient(90deg,var(--orD),var(--or))',inactif:'linear-gradient(90deg,var(--rougeD),var(--rouge))'};var cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var paye=(p&&p!==0);var bg=paye?'var(--vertD)':ec?'var(--orD)':pas?'var(--rougeD)':'#1a2a3a';var c=paye?'var(--vert)':ec?'var(--or)':pas?'rgba(255,107,107,0.4)':'var(--grisT)';return'<div title="'+TOUS_MOIS()[idx]+'" style="width:13px;height:13px;border-radius:2px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-size:6px;color:'+c+';font-weight:900">'+(p?'&#x2714;':pas?'·':'')+'</div>';}).join('');var logoH=LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:36px;height:36px;border-radius:8px;object-fit:cover"/>'  :'<div style="width:36px;height:36px;border-radius:8px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:18px">⛪</div>';return['<div style="background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:16px;overflow:hidden">','<div style="height:5px;background:'+strip[s]+'"></div>','<div style="padding:16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px"><div style="flex:1;min-width:0;margin-right:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">',logoH,'<div><div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase">'+CFG.nom_eglise+' – CARTE MEMBRE</div><div style="font-weight:900;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">'+m.nom+'</div></div></div><div style="color:var(--bleu);font-size:12px;margin-top:3px">'+m.id+'</div><div style="margin-top:8px">'+badgeHTML(s)+'</div></div><div><div class="qr-wrap" id="qr-'+m.id+'" style="width:96px;height:96px;display:flex;align-items:center;justify-content:center"><div style="color:var(--grisC);font-size:10px">QR...</div></div></div></div>','<div class="grid-2" style="gap:6px;margin-bottom:12px">',[['Cotisation',fmt(m.montant)+'/mois','var(--bleu)'],['Total payé',fmt(payes*m.montant),'var(--vert)'],['Mois payés',payes+'/'+(MOIS_COURANT()+1),'var(--vert)'],['Solde dû',manq>0?fmt(manq*m.montant):'Aucun',manq>0?'var(--or)':'var(--vert)']].map(function(x){return'<div style="background:#111d2a;border-radius:8px;padding:8px 10px"><div style="color:var(--grisT);font-size:9px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:700;font-size:12px;margin-top:2px">'+x[1]+'</div></div>';}).join(''),'</div>','<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:10px">'+cal+'</div>','<div style="display:flex;gap:8px"><button class="btn btn-or" style="font-size:11px;padding:6px 10px;flex:1" onclick="imprimerCarte(\''+m.id+'\')">&#x1F5A8; A4</button>','<button class="btn btn-primary" style="font-size:12px;padding:7px 12px" onclick="imprimerCartePVC(\''+m.id+'\')">&#x1F4B3; PVC</button>','<button class="btn btn-primary" style="font-size:11px;padding:6px 10px;flex:1" onclick="ouvrirValidation(\''+m.id+'\')">&#x2705; Valider</button></div>','</div></div>'].join('');}
 function genQR(m){
   var el=document.getElementById('qr-'+m.id);
   if(!el||el.dataset.generated)return;
@@ -1706,6 +1707,237 @@ function genCarteHTML(m){
     '</div>'
   ].join('');
 }
+
+
+// ══════════════════════════════════════════════════
+// CARTE FORMAT PVC (85.6 x 54mm — format CB)
+// ══════════════════════════════════════════════════
+function genCartePVCHTML(m){
+  var s = statutMembre(m);
+  var strip = {
+    ajour:  'linear-gradient(90deg,#0d5c3a,#4eff9b)',
+    retard: 'linear-gradient(90deg,#5c3a0d,#ffb347)',
+    inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'
+  };
+  var logoHTML = LOGO_DATA
+    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;vertical-align:middle"/>'
+    : '<span style="font-size:14px">&#x26EA;</span>';
+
+  // QR code grand format via API
+  var qrText = 'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant;
+  var qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='
+    + encodeURIComponent(qrText)+'&format=png&margin=2&color=0a1628&bgcolor=ffffff';
+
+  // Dimensions carte PVC en CSS : 85.6mm x 54mm
+  return '<div class="carte-pvc" style="'
+    +'width:85.6mm;height:54mm;'
+    +'background:linear-gradient(135deg,#0a1628,#0f2030);'
+    +'border-radius:4mm;overflow:hidden;'
+    +'font-family:Arial,sans-serif;'
+    +'display:inline-block;margin:3mm;'
+    +'page-break-inside:avoid;'
+    +'position:relative;'
+    +'box-shadow:0 2px 8px rgba(0,0,0,0.4);'
+    +'">'
+
+    // Bande colorée haut
+    +'<div style="height:4px;background:'+strip[s]+';"></div>'
+
+    // Contenu principal
+    +'<div style="display:flex;height:calc(54mm - 4px);padding:3mm;">'
+
+      // Colonne gauche : infos membre
+      +'<div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding-right:2mm;">'
+
+        // Header : logo + nom eglise
+        +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:2mm;">'
+          +logoHTML
+          +'<div style="overflow:hidden;">'
+            +'<div style="font-size:5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CFG.nom_eglise+'</div>'
+            +'<div style="font-size:4.5px;color:#556677;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CFG.nom_projet+'</div>'
+          +'</div>'
+        +'</div>'
+
+        // Nom membre
+        +'<div style="font-size:9px;font-weight:900;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44mm;">'+m.nom+'</div>'
+
+        // ID membre
+        +'<div style="font-size:8px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;letter-spacing:0.5px;margin-top:1mm;">'+m.id+'</div>'
+
+        // Cotisation + statut
+        +'<div style="display:flex;gap:3mm;margin-top:1mm;align-items:center;">'
+          +'<div style="font-size:7px;color:#ffb347;font-weight:700;">'+fmt(m.montant)+'/mois</div>'
+          +'<div style="font-size:6px;padding:1px 4px;border-radius:2px;font-weight:700;background:'+(s==='ajour'?'#0d5c3a':s==='retard'?'#5c3a0d':'#5c0d0d')+';color:'+(s==='ajour'?'#4eff9b':s==='retard'?'#ffb347':'#ff6b6b')+';white-space:nowrap;">'+(s==='ajour'?'A JOUR':s==='retard'?'RETARD':'INACTIF')+'</div>'
+        +'</div>'
+
+        // Tel si disponible
+        +(m.tel ? '<div style="font-size:6px;color:#556677;margin-top:1mm;">'+m.tel+'</div>' : '')
+
+      +'</div>'
+
+      // Colonne droite : QR code grand format
+      +'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;">'
+        +'<div style="background:#ffffff;padding:2px;border-radius:3px;">'
+          +'<img src="'+qrUrl+'" width="110" height="110" style="display:block;" alt="QR '+m.id+'"/>'
+        +'</div>'
+        +'<div style="font-size:5px;color:#8899aa;margin-top:1mm;font-family:Courier New;text-align:center;">'+m.id+'</div>'
+      +'</div>'
+
+    +'</div>'
+  +'</div>';
+}
+
+function imprimerCartesPVC(liste) {
+  // Styles d'impression optimisés carte PVC
+  var printStyles = '<style>'
+    +'@page { size: A4; margin: 10mm; }'
+    +'@media print {'
+      +' body { margin:0; padding:0; }'
+      +' .carte-pvc { '
+        +'   -webkit-print-color-adjust: exact !important;'
+        +'   print-color-adjust: exact !important;'
+        +'   color-adjust: exact !important;'
+        +' }'
+    +'}'
+    +'.pvc-grid {'
+      +'display:flex;'
+      +'flex-wrap:wrap;'
+      +'gap:5mm;'
+      +'padding:5mm;'
+      +'justify-content:flex-start;'
+    +'}'
+    +'</style>';
+
+  var cartesHTML = liste.map(function(m){ return genCartePVCHTML(m); }).join('');
+
+  var zone = document.getElementById('print-zone');
+  zone.innerHTML = printStyles
+    +'<div style="padding:5mm;text-align:center;font-family:Arial;font-size:10px;color:#333;margin-bottom:5mm;">'
+    +'<strong>CARTES FORMAT PVC — A decouper</strong><br/>'
+    +'Format standard 85.6 x 54mm — '+liste.length+' carte(s)'
+    +'</div>'
+    +'<div class="pvc-grid">'+cartesHTML+'</div>';
+
+  // Attendre chargement des QR codes
+  setTimeout(function(){ window.print(); }, 2000);
+}
+
+function imprimerCartePVC(id) {
+  var m = MEMBRES.find(function(x){ return x.id===id; });
+  if (!m) return;
+  imprimerCartesPVC([m]);
+}
+
+function imprimerToutesCartesPVC() {
+  if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
+  imprimerCartesPVC(MEMBRES);
+}
+
+
+// ══════════════════════════════════════════════════
+// CARTES FORMAT PVC (85.6 x 54mm — carte de crédit)
+// ══════════════════════════════════════════════════
+function genCartePVCHTML(m) {
+  var s = statutMembre(m);
+  var MC = MOIS_COURANT();
+  var payes = m.paiements.filter(function(p){ return p && p!==0; }).length;
+  var strip = {
+    ajour:  'linear-gradient(135deg,#0d5c3a,#4eff9b)',
+    retard: 'linear-gradient(135deg,#5c3a0d,#ffb347)',
+    inactif:'linear-gradient(135deg,#5c0d0d,#ff6b6b)'
+  };
+  var logoHTML = LOGO_DATA
+    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
+    : '<div style="width:22px;height:22px;border-radius:3px;background:#1a3a5a;flex-shrink:0"></div>';
+
+  // QR code grand format pour carte PVC
+  var qrText = 'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant;
+  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data='+encodeURIComponent(qrText)+'&format=png&margin=2&bgcolor=ffffff&color=0a1628';
+
+  // Carte PVC : 85.6mm x 54mm = 323px x 204px à 96dpi
+  return [
+    '<div style="width:323px;height:204px;background:linear-gradient(135deg,#0a1628,#0f2030);',
+    'border-radius:10px;overflow:hidden;font-family:Arial,sans-serif;',
+    'display:inline-block;margin:4mm;vertical-align:top;page-break-inside:avoid;',
+    'box-shadow:0 2px 8px rgba(0,0,0,0.4);position:relative;">',
+
+      // Bande couleur statut en haut
+      '<div style="height:4px;background:'+strip[s]+'"></div>',
+
+      '<div style="padding:8px 10px;height:calc(100% - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">',
+
+        // HEADER : logo + nom église + QR
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">',
+          '<div style="flex:1;min-width:0;">',
+            '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">',
+              logoHTML,
+              '<div style="font-size:5.5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.2;">'+
+                (CFG.nom_eglise||'ARR')+'</div>',
+            '</div>',
+            // Nom membre
+            '<div style="font-weight:900;font-size:11px;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">'+m.nom+'</div>',
+            // Code membre en monospace
+            '<div style="font-size:9px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;margin-top:2px;">'+m.id+'</div>',
+          '</div>',
+          // QR CODE GRAND FORMAT
+          '<div style="background:#ffffff;padding:3px;border-radius:5px;flex-shrink:0;">',
+            '<img src="'+qrUrl+'" width="80" height="80" style="display:block;" alt="QR"/>',
+          '</div>',
+        '</div>',
+
+        // FOOTER : cotisation + statut
+        '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #1a3a5a;padding-top:5px;">',
+          '<div>',
+            '<div style="font-size:7px;color:#556677;text-transform:uppercase;font-weight:700;">Cotisation</div>',
+            '<div style="font-size:9px;color:#64d4ff;font-weight:700;">'+fmt(m.montant)+'/mois</div>',
+          '</div>',
+          '<div style="text-align:center;">',
+            '<div style="font-size:7px;color:#556677;text-transform:uppercase;font-weight:700;">Mois payes</div>',
+            '<div style="font-size:9px;color:#4eff9b;font-weight:700;">'+payes+'/'+CFG.nb_mois+'</div>',
+          '</div>',
+          '<div>',
+            badgeHTML(s),
+          '</div>',
+        '</div>',
+
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
+
+function imprimerToutesCartesPVC() {
+  if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
+  imprimerCartesPVC(MEMBRES);
+}
+
+function imprimerCartesPVC(liste) {
+  var zone = document.getElementById('print-zone');
+  // Styles spéciaux pour format PVC
+  zone.innerHTML = [
+    '<style>',
+    '@media print {',
+    '  @page { size: A4; margin: 10mm; }',
+    '  body { background: white !important; }',
+    '  #print-zone { display: block !important; }',
+    '  .pvc-grid { display: flex; flex-wrap: wrap; gap: 4mm; justify-content: flex-start; }',
+    '  .pvc-card { page-break-inside: avoid; }',
+    '}',
+    '</style>',
+    '<div style="padding:5mm;">',
+    '<div style="font-family:Arial;font-size:10px;color:#333;margin-bottom:6mm;border-bottom:1px solid #ccc;padding-bottom:3mm;">',
+    '<strong>'+CFG.nom_eglise+'</strong> — Cartes Membres Format PVC — '+liste.length+' carte(s) — '+new Date().toLocaleDateString('fr-FR'),
+    '</div>',
+    '<div class="pvc-grid">',
+    liste.map(function(m){ return '<div class="pvc-card">'+genCartePVCHTML(m)+'</div>'; }).join(''),
+    '</div>',
+    '</div>'
+  ].join('');
+
+  // Attendre que les QR se chargent (images externes)
+  setTimeout(function(){ window.print(); }, 2000);
+}
+// ══════════════════════════════════════════════════
 
 function imprimerCarte(id){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;imprimerCartes([m]);}
 function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun membre','danger');return;}imprimerCartes(MEMBRES);}
@@ -2080,6 +2312,107 @@ function installerPWA() {
     _deferredPWAPrompt = null;
   });
 }
+
+
+// ══ CARTES FORMAT PVC (85.6mm x 54mm — format carte bancaire) ══
+function genCartePVCHTML(m) {
+  var s = statutMembre(m);
+  var strip = {
+    ajour:   'linear-gradient(90deg,#0d5c3a,#4eff9b)',
+    retard:  'linear-gradient(90deg,#5c3a0d,#ffb347)',
+    inactif: 'linear-gradient(90deg,#5c0d0d,#ff6b6b)'
+  };
+  var logoHTML = LOGO_DATA
+    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
+    : '<div style="width:22px;height:22px;background:#1a3a5a;border-radius:3px;flex-shrink:0"></div>';
+
+  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&data='
+    + encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)
+    + '&format=png&margin=2&color=0a1628&bgcolor=ffffff';
+
+  return [
+    '<div style="width:85.6mm;height:54mm;background:linear-gradient(135deg,#0a1628,#0f2030);',
+    'border-radius:4px;overflow:hidden;font-family:Arial,sans-serif;',
+    'display:inline-block;margin:3mm;vertical-align:top;box-sizing:border-box;',
+    'page-break-inside:avoid;position:relative;">',
+
+      // Bande colorée haut
+      '<div style="height:4px;background:'+strip[s]+'"></div>',
+
+      '<div style="padding:5px 6px 4px 6px;height:calc(54mm - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">',
+
+        // LIGNE 1: Logo + Nom église + QR code
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">',
+          '<div style="flex:1;min-width:0;padding-right:4px;">',
+            '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">',
+              logoHTML,
+              '<div style="font-size:5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.2">'+CFG.nom_eglise+'</div>',
+            '</div>',
+            // Nom membre
+            '<div style="font-weight:900;font-size:8px;color:#ddeeff;line-height:1.2;margin-bottom:2px;word-break:break-word;">'+m.nom+'</div>',
+            // Code membre
+            '<div style="font-size:8px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;letter-spacing:.5px;">'+m.id+'</div>',
+          '</div>',
+          // QR CODE GRAND FORMAT
+          '<div style="background:#ffffff;padding:3px;border-radius:4px;flex-shrink:0;">',
+            '<img src="'+qrUrl+'" width="110" height="110"',
+            ' style="display:block;border-radius:2px;" alt="QR '+m.id+'"/>',
+          '</div>',
+        '</div>',
+
+        // LIGNE 2: Cotisation + Projet
+        '<div style="border-top:1px solid #1a3a5a;padding-top:3px;display:flex;justify-content:space-between;align-items:flex-end;">',
+          '<div>',
+            '<div style="font-size:5px;color:#556677;text-transform:uppercase;font-weight:700;">Cotisation mensuelle</div>',
+            '<div style="font-size:8px;color:#ffb347;font-weight:700;">'+fmt(m.montant)+' F/mois</div>',
+          '</div>',
+          '<div style="text-align:right;">',
+            '<div style="font-size:5px;color:#556677;">'+CFG.nom_projet+'</div>',
+            m.tel ? '<div style="font-size:5.5px;color:#445566;">'+m.tel+'</div>' : '',
+          '</div>',
+        '</div>',
+
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
+
+function imprimerToutesPVC() {
+  if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
+  imprimerCartesPVC(MEMBRES);
+}
+
+function imprimerCartesPVC(liste) {
+  var zone = document.getElementById('print-zone');
+  // Styles spéciaux pour impression PVC
+  var style = [
+    '<style>',
+    '@media print {',
+    '  @page { size: A4; margin: 8mm; }',
+    '  body { margin: 0; background: white; }',
+    '  #print-zone { display: block !important; }',
+    '  .no-print { display: none !important; }',
+    '}',
+    '#print-zone-pvc {',
+    '  display: flex;',
+    '  flex-wrap: wrap;',
+    '  gap: 4mm;',
+    '  padding: 4mm;',
+    '  background: white;',
+    '}',
+    '</style>'
+  ].join('');
+
+  zone.innerHTML = style
+    + '<div id="print-zone-pvc">'
+    + liste.map(function(m){ return genCartePVCHTML(m); }).join('')
+    + '</div>';
+
+  // Attendre le chargement des QR codes puis imprimer
+  setTimeout(function(){ window.print(); }, 2000);
+}
+// ══════════════════════════════════════════════════
 
 if('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
