@@ -2185,42 +2185,111 @@ function importerCSV(input) {
   var reader = new FileReader();
   reader.onload = function(e) {
     var text = e.target.result;
-    // Détecter séparateur: virgule ou point-virgule
-    var sep = text.indexOf(';') > text.indexOf(',') ? ';' : ',';
-    var lines = text.split('\n').filter(function(l){ return l.trim(); });
-    if(lines.length < 2) { notifier('&#x26A0; Fichier vide ou invalide','danger'); return; }
 
-    // Détecter les colonnes
-    var headers = lines[0].split(sep).map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
-    var colNom = headers.findIndex(function(h){ return h.includes('nom') || h.includes('name'); });
-    var colMontant = headers.findIndex(function(h){ return h.includes('montant') || h.includes('amount') || h.includes('cotis'); });
-    var colTel = headers.findIndex(function(h){ return h.includes('tel') || h.includes('phone') || h.includes('mobile'); });
+    // Détecter séparateur : ; ou , ou tabulation
+    var sep = '\t';
+    if(text.indexOf(';') >= 0 && text.indexOf(';') < (text.indexOf(',') < 0 ? 9999 : text.indexOf(','))) sep = ';';
+    else if(text.indexOf(',') >= 0) sep = ',';
 
-    if(colNom < 0) { notifier('&#x26A0; Colonne "Nom" non trouvée','danger'); return; }
+    var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+    if(lines.length < 2) { notifier('&#x26A0; Fichier vide ou invalide (moins de 2 lignes)','danger'); return; }
 
-    var importes = 0, ignores = 0;
+    // Nettoyer et détecter colonnes (insensible à la casse, accents, espaces)
+    function normalize(s){ return s.trim().toLowerCase().replace(/"/g,'').replace(/[éèêë]/g,'e').replace(/[àâä]/g,'a').replace(/[ùûü]/g,'u').replace(/[îï]/g,'i').replace(/[ôö]/g,'o'); }
+    var headers = lines[0].split(sep).map(normalize);
+
+    var colNom     = headers.findIndex(function(h){ return h.includes('nom') || h.includes('name') || h.includes('prenom') || h === 'membre'; });
+    var colMontant = headers.findIndex(function(h){ return h.includes('montant') || h.includes('amount') || h.includes('cotis') || h.includes('tarif') || h.includes('mensuel'); });
+    var colTel     = headers.findIndex(function(h){ return h.includes('tel') || h.includes('phone') || h.includes('mobile') || h.includes('contact') || h.includes('numero'); });
+
+    if(colNom < 0) {
+      notifier('&#x26A0; Colonne Nom introuvable. Verifiez que votre fichier a une colonne intitulee : Nom, Name ou Membre','danger');
+      return;
+    }
+
+    // Construire l'aperçu
+    var apercu = [];
+    var aIgnorer = [];
+
     lines.slice(1).forEach(function(line) {
-      var cols = line.split(sep).map(function(c){ return c.trim().replace(/"/g,''); });
-      var nom = cols[colNom];
-      if(!nom) { ignores++; return; }
+      var cols = line.split(sep).map(function(c){ return c.trim().replace(/^"|"$/g,''); });
+      var nom = cols[colNom] ? cols[colNom].trim() : '';
+      if(!nom) return;
 
-      // Ignorer si membre existe déjà
-      if(MEMBRES.some(function(m){ return m.nom.toLowerCase()===nom.toLowerCase(); })) { ignores++; return; }
+      var montant = colMontant >= 0 ? (parseInt(cols[colMontant]) || CFG.montant_defaut || 2000) : (CFG.montant_defaut || 2000);
+      var tel = colTel >= 0 ? (cols[colTel] || '') : '';
 
-      var montant = colMontant>=0 ? parseInt(cols[colMontant])||2000 : 2000;
-      var tel = colTel>=0 ? cols[colTel] : '';
-      var id = genId(MEMBRES.length+1);
-      MEMBRES.push({id:id, nom:nom, montant:montant, tel:tel, paiements:Array(CFG.nb_mois).fill(0)});
-      importes++;
+      var dejaExiste = MEMBRES.some(function(m){ return m.nom.toLowerCase() === nom.toLowerCase(); });
+      if(dejaExiste) { aIgnorer.push(nom); return; }
+
+      apercu.push({ nom: nom, montant: montant, tel: tel });
     });
 
-    sauvegarder();
-    sauvegarderCloud();
-    notifier('&#x2705; '+importes+' membres importés, '+ignores+' ignorés');
-    changerVue('membres');
+    if(!apercu.length) {
+      notifier('&#x26A0; Aucun nouveau membre à importer (' + aIgnorer.length + ' déjà existants ignorés)','danger');
+      return;
+    }
+
+    // Afficher modal d'aperçu
+    var lignesApercu = apercu.slice(0,10).map(function(a){
+      return '<tr><td style="padding:4px 8px;border-bottom:1px solid #1a3a5a">'+a.nom+'</td>'
+           + '<td style="padding:4px 8px;border-bottom:1px solid #1a3a5a;color:var(--or)">'+fmt(a.montant)+' F/mois</td>'
+           + '<td style="padding:4px 8px;border-bottom:1px solid #1a3a5a;color:var(--grisC)">'+(a.tel||'—')+'</td></tr>';
+    }).join('');
+
+    var plusHTML = apercu.length > 10 ? '<tr><td colspan="3" style="padding:6px 8px;color:var(--grisC);font-style:italic">... et '+(apercu.length-10)+' autres membres</td></tr>' : '';
+    var ignoresHTML = aIgnorer.length ? '<div style="color:var(--or);font-size:11px;margin-top:8px">&#x26A0; '+aIgnorer.length+' membre(s) ignoré(s) car déjà existant(s)</div>' : '';
+
+    IMPORT_APERCU_COURANT = apercu;
+    var modalHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center" id="modal-import">'
+      + '<div style="background:#0a1628;border:1px solid var(--or);border-radius:16px;padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto">'
+      + '<div style="font-weight:800;font-size:15px;color:var(--or);margin-bottom:12px">&#x1F4CB; Apercu de l\'import — '+apercu.length+' nouveau(x) membre(s)</div>'
+      + '<div style="font-size:11px;color:var(--grisC);margin-bottom:10px;background:#111d2a;padding:8px 12px;border-radius:8px">'
+      + '&#x26A0; Seules les informations des membres seront importées.<br>Les paiements sont à zéro — ils devront être validés manuellement.'
+      + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      + '<thead><tr>'
+      + '<th style="text-align:left;padding:4px 8px;color:var(--grisC);font-size:10px;text-transform:uppercase">Nom</th>'
+      + '<th style="text-align:left;padding:4px 8px;color:var(--grisC);font-size:10px;text-transform:uppercase">Cotisation</th>'
+      + '<th style="text-align:left;padding:4px 8px;color:var(--grisC);font-size:10px;text-transform:uppercase">Téléphone</th>'
+      + '</tr></thead><tbody>'
+      + lignesApercu + plusHTML
+      + '</tbody></table>'
+      + ignoresHTML
+      + '<div style="display:flex;gap:10px;margin-top:16px">'
+      + '<button class="btn btn-primary" style="flex:1" onclick="confirmerImportCSV(this)" data-apercu=\''+JSON.stringify(apercu).replace(/\'/g,"&#39;")+'\'">&#x2705; Importer '+apercu.length+' membre(s)</button>'
+      + '<button class="btn btn-ghost" style="flex:1" onclick="document.getElementById(&quot;modal-import&quot;).remove()">Annuler</button>'
+      + '</div></div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
   };
   reader.readAsText(file, 'UTF-8');
   input.value = '';
+}
+
+var IMPORT_APERCU_COURANT = [];
+function confirmerImportCSV() {
+  var apercu = IMPORT_APERCU_COURANT;
+  document.getElementById('modal-import') && document.getElementById('modal-import').remove();
+  var importes = 0;
+  apercu.forEach(function(a) {
+    // Vérifier une dernière fois qu'il n'existe pas
+    if(MEMBRES.some(function(m){ return m.nom.toLowerCase() === a.nom.toLowerCase(); })) return;
+    var id = genId(MEMBRES.length + 1);
+    // IMPORTANT : paiements tous à zéro — les paiements sont manuels
+    MEMBRES.push({
+      id: id,
+      nom: a.nom,
+      montant: a.montant,   // montant de cotisation mensuelle choisi
+      tel: a.tel || '',
+      paiements: Array(CFG.nb_mois).fill(0)
+    });
+    importes++;
+  });
+  sauvegarder();
+  sauvegarderCloud();
+  notifier('&#x2705; ' + importes + ' membre(s) importé(s) avec succès — paiements à zéro');
+  changerVue('membres');
 }
 
 // ══════════════════════════════════════════════════
