@@ -2085,7 +2085,64 @@ function vueSauvegarde(){var aJour=MEMBRES.filter(function(m){return statutMembr
 function exporterJSON(){var blob=new Blob([JSON.stringify(MEMBRES,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='membres_'+CFG.nom_eglise.replace(/\s/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.json';a.click();}
 function exporterCSV(){var hdr='Code,Nom,Montant,Telephone,Mois_Payes,Total_Verse,Solde_Du,Statut';var rows=MEMBRES.map(function(m){var p=m.paiements.filter(function(x,i){return x&&i<=MOIS_COURANT();}).length;var mq=m.paiements.filter(function(x,i){return !x&&i<=MOIS_COURANT();}).length;return m.id+',"'+m.nom+'",'+m.montant+',"'+(m.tel||'')+'",'+p+','+p*m.montant+','+mq*m.montant+','+statutMembre(m);});var blob=new Blob(['\uFEFF'+[hdr].concat(rows).join('\n')],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='membres_'+new Date().toISOString().slice(0,10)+'.csv';a.click();}
 function importerJSON(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var data=JSON.parse(e.target.result);if(!Array.isArray(data))throw new Error('Format invalide');var nb=CFG.nb_mois;MEMBRES=data.filter(function(m){return m.id&&m.nom&&m.montant&&Array.isArray(m.paiements);}).map(function(m){var p=m.paiements;if(p.length<nb)return Object.assign({},m,{paiements:p.concat(Array(nb-p.length).fill(0))});if(p.length>nb)return Object.assign({},m,{paiements:p.slice(0,nb)});return m;});sauvegarder();sauvegarderCloud();notifier('&#x2714; '+MEMBRES.length+' membres importés');changerVue('membres');}catch(err){notifier('&#x26A0; Erreur : '+err.message,'danger');}};reader.readAsText(file);input.value='';}
-function effacerTout(){if(!confirm('&#x26A0; Effacer TOUS les membres ?'))return;MEMBRES=[];sauvegarder();sauvegarderCloud();notifier('Effacé','danger');changerVue('membres');}
+function effacerTout(){
+  // Réservé à l'Admin uniquement
+  if(ROLE_ACTUEL !== 'admin'){
+    notifier('&#x26A0; Cette action est réservée à l\'administrateur uniquement','danger');
+    return;
+  }
+  // Modale de confirmation renforcée
+  var modalHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center" id="modal-effacer">'
+    + '<div style="background:#1a0505;border:2px solid #c0392b;border-radius:16px;padding:28px;max-width:420px;width:90%">'
+    + '<div style="font-size:32px;text-align:center;margin-bottom:10px">&#x26A0;</div>'
+    + '<div style="font-weight:800;font-size:16px;color:#ff6b6b;text-align:center;margin-bottom:8px">ACTION IRRÉVERSIBLE</div>'
+    + '<div style="font-size:12px;color:#ffaaaa;text-align:center;margin-bottom:20px">'
+    + 'Vous êtes sur le point d\'effacer les <strong>'+MEMBRES.length+' membres</strong> et tous leurs paiements.<br/><br/>'
+    + 'Cette action est <strong>irréversible</strong>. Assurez-vous d\'avoir exporté les données en JSON avant de continuer.'
+    + '</div>'
+    + '<div style="background:#111;border-radius:8px;padding:12px;margin-bottom:16px">'
+    + '<div style="font-size:11px;color:#ff6b6b;font-weight:700;margin-bottom:6px">Tapez CONFIRMER pour valider :</div>'
+    + '<input id="effacer-confirm-text" type="text" placeholder="CONFIRMER" style="width:100%;padding:10px;background:#1a0a0a;color:#fff;border:1px solid #c0392b;border-radius:6px;font-size:14px;box-sizing:border-box"/>'
+    + '</div>'
+    + '<div style="background:#111;border-radius:8px;padding:12px;margin-bottom:20px">'
+    + '<div style="font-size:11px;color:#ff6b6b;font-weight:700;margin-bottom:6px">Mot de passe administrateur :</div>'
+    + '<input id="effacer-mdp" type="password" placeholder="Mot de passe admin" style="width:100%;padding:10px;background:#1a0a0a;color:#fff;border:1px solid #c0392b;border-radius:6px;font-size:14px;box-sizing:border-box"/>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px">'
+    + '<button class="btn btn-danger" style="flex:1;padding:12px" onclick="validerEffacement()">&#x1F5D1; Effacer définitivement</button>'
+    + '<button class="btn btn-ghost" style="flex:1;padding:12px" onclick="document.getElementById(&quot;modal-effacer&quot;).remove()">Annuler</button>'
+    + '</div>'
+    + '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  setTimeout(function(){ document.getElementById('effacer-confirm-text').focus(); }, 100);
+}
+
+async function validerEffacement(){
+  var texte = document.getElementById('effacer-confirm-text').value.trim();
+  var mdp = document.getElementById('effacer-mdp').value;
+  if(texte !== 'CONFIRMER'){
+    notifier('&#x26A0; Tapez exactement CONFIRMER pour valider','danger');
+    return;
+  }
+  // Vérifier le MDP admin
+  var comptes = getComptes();
+  var hash = await sha256(mdp);
+  if(!comptes || !comptes.admin || comptes.admin.hash !== hash){
+    notifier('&#x26A0; Mot de passe administrateur incorrect','danger');
+    return;
+  }
+  // Sauvegarder d'abord un backup automatique
+  var backupKey = 'temple_backup_' + new Date().toISOString().slice(0,10);
+  try { localStorage.setItem(backupKey, JSON.stringify(MEMBRES)); } catch(e){}
+  
+  document.getElementById('modal-effacer').remove();
+  MEMBRES = [];
+  sauvegarder();
+  sauvegarderCloud();
+  journaliser('EFFACEMENT TOTAL', 'Tous les membres effacés par ' + (COMPTE_ACTUEL ? COMPTE_ACTUEL.nom : 'Admin'));
+  notifier('&#x26A0; Tous les membres ont été effacés — backup local sauvegardé','danger');
+  changerVue('membres');
+}
 function exporterPourMembres(){var d={cfg:CFG,membres:MEMBRES.map(function(m){return{id:m.id,nom:m.nom,montant:m.montant,paiements:m.paiements};}),export_date:new Date().toISOString()};var blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='donnees_membres.json';a.click();notifier('&#x2705; Exporté !');}
 
 // PARAMÈTRES
@@ -2803,6 +2860,89 @@ function genererExcel() {
 }
 // ══════════════════════════════════════════════════
 
+
+// ── SAUVEGARDE AUTOMATIQUE QUOTIDIENNE ──
+function sauvegardeAutomatique() {
+  if(!MEMBRES.length) return;
+  var today = new Date().toISOString().slice(0,10);
+  var lastBackup = localStorage.getItem('temple_last_backup_date');
+  if(lastBackup === today) return; // déjà sauvegardé aujourd'hui
+  
+  try {
+    // Garder les 7 derniers jours de backup
+    var backupKey = 'temple_backup_' + today;
+    localStorage.setItem(backupKey, JSON.stringify({
+      date: today,
+      membres: MEMBRES,
+      cfg: CFG,
+      total: MEMBRES.reduce(function(s,m){ return s+m.paiements.filter(function(p){return p&&p!==0;}).length*m.montant; }, 0)
+    }));
+    localStorage.setItem('temple_last_backup_date', today);
+    
+    // Purger les backups de plus de 7 jours
+    Object.keys(localStorage).forEach(function(k) {
+      if(k.startsWith('temple_backup_') && k !== backupKey && k !== 'temple_backup_'+today) {
+        var dateStr = k.replace('temple_backup_', '');
+        var diff = (new Date(today) - new Date(dateStr)) / (1000*60*60*24);
+        if(diff > 7) localStorage.removeItem(k);
+      }
+    });
+    console.log('Backup automatique sauvegardé:', today);
+  } catch(e) { console.log('Backup auto échoué:', e); }
+}
+
+function restaurerBackup() {
+  // Lister les backups disponibles
+  var backups = [];
+  Object.keys(localStorage).forEach(function(k) {
+    if(k.startsWith('temple_backup_')) {
+      try {
+        var data = JSON.parse(localStorage.getItem(k));
+        if(data && data.membres) backups.push({key:k, date:data.date, nb:data.membres.length, total:data.total});
+      } catch(e){}
+    }
+  });
+  backups.sort(function(a,b){ return b.date.localeCompare(a.date); });
+  
+  if(!backups.length) {
+    notifier('&#x26A0; Aucun backup local disponible','danger');
+    return;
+  }
+  
+  var lignes = backups.map(function(b) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#111d2a;border-radius:8px;margin-bottom:8px">'
+      + '<div>'
+      + '<div style="font-weight:700;color:#ddeeff;font-size:13px">Backup du ' + b.date + '</div>'
+      + '<div style="font-size:11px;color:#8899aa">' + b.nb + ' membres · ' + (b.total||0).toLocaleString('fr-FR') + ' F encaissés</div>'
+      + '</div>'
+      + '<button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="confirmerRestauration(&quot;' + b.key + '&quot;)">&#x21A9; Restaurer</button>'
+      + '</div>';
+  }).join('');
+  
+  var modalHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center" id="modal-backup">'
+    + '<div style="background:#0a1628;border:2px solid var(--or);border-radius:16px;padding:24px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto">'
+    + '<div style="font-weight:800;font-size:15px;color:var(--or);margin-bottom:16px">&#x1F4BE; Restaurer un backup local</div>'
+    + lignes
+    + '<button class="btn btn-ghost btn-full" style="margin-top:12px" onclick="document.getElementById(&quot;modal-backup&quot;).remove()">Fermer</button>'
+    + '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function confirmerRestauration(key) {
+  if(!confirm('Restaurer ce backup ? Les données actuelles seront remplacées.')) return;
+  try {
+    var data = JSON.parse(localStorage.getItem(key));
+    if(!data || !data.membres) { notifier('&#x26A0; Backup invalide','danger'); return; }
+    MEMBRES = data.membres;
+    sauvegarder();
+    sauvegarderCloud();
+    document.getElementById('modal-backup') && document.getElementById('modal-backup').remove();
+    notifier('&#x2705; ' + MEMBRES.length + ' membres restaurés depuis le backup du ' + data.date);
+    changerVue('membres');
+  } catch(e) { notifier('&#x26A0; Erreur lors de la restauration','danger'); }
+}
+// ────────────────────────────────────────────────────
+
 if('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js').then(function(reg){
@@ -2830,7 +2970,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-confirmer-suppr').addEventListener('click', confirmerSuppression);
   document.getElementById('btn-annuler-suppr').addEventListener('click', fermerModal);
 
-  charger(); chargerLogo(); mettreAJourHeader();
+  charger(); chargerLogo(); mettreAJourHeader(); setTimeout(sauvegardeAutomatique, 3000);
   afficherVue();
 
   var sess = sessionStorage.getItem('temple_session');
