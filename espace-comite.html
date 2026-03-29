@@ -1267,7 +1267,7 @@ function vueStats() {
 
     // BOUTON EXPORT PDF
     '<div style="display:flex;gap:10px;margin-bottom:14px">',
-      '<button class="btn btn-or btn-full" style="font-size:14px;padding:14px" onclick="exporterRapportPDF()">&#x1F4C4; Exporter le rapport PDF</button>',
+      '<div style="display:flex;gap:10px;margin-bottom:14px">'+'<button class="btn btn-or" style="flex:1;font-size:13px;padding:12px" onclick="exporterRapportPDF()">&#x1F4C4; Rapport PDF</button>'+'<button class="btn btn-vert" style="flex:1;font-size:13px;padding:12px" onclick="exporterExcel()">&#x1F4CA; Export Excel</button>'+'</div>',
     '</div>',
 
     // TABLEAU DÉTAILLÉ
@@ -1319,6 +1319,89 @@ function vueStats() {
             +'</tr>';
           }).join('')
           +'</tbody></table>';
+      })(),
+    '</div>',
+
+    // ── STATISTIQUES PAR JOUR D'ENCAISSEMENT ──
+    '<div class="card">',
+      '<div style="color:var(--grisC);font-weight:800;font-size:13px;margin-bottom:14px">&#x1F4C5; Encaissements par jour de validation</div>',
+      (function(){
+        // Construire le dictionnaire : date (YYYY-MM-DD) → {total, nb, details[]}
+        var parJour = {};
+        MEMBRES.forEach(function(m) {
+          m.paiements.forEach(function(p, idx) {
+            if(!p || p===0 || p===1) return; // ignorer les non-payés et anciens booleans
+            // p est un timestamp (Date.now())
+            var d = new Date(p);
+            var dateKey = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+            var dateLabel = d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+            if(!parJour[dateKey]) parJour[dateKey] = {total:0, nb:0, label:dateLabel, details:[]};
+            parJour[dateKey].total += m.montant;
+            parJour[dateKey].nb++;
+            parJour[dateKey].details.push({nom:m.nom, montant:m.montant, mois:TOUS_MOIS()[idx]});
+          });
+        });
+
+        var jours = Object.keys(parJour).sort().reverse(); // plus récent en premier
+        if(!jours.length) return '<div style="color:var(--grisC);font-size:12px;text-align:center;padding:16px">Aucun paiement validé pour le moment</div>';
+
+        var maxTotal = Math.max.apply(null, jours.map(function(k){ return parJour[k].total; }));
+
+        // Graphe barres horizontales
+        var graphHTML = '<div style="margin-bottom:16px">'
+          + jours.map(function(k) {
+            var j = parJour[k];
+            var pct = maxTotal > 0 ? Math.round(j.total/maxTotal*100) : 0;
+            var couleur = pct>=80?'var(--vert)':pct>=50?'var(--bleu)':'var(--or)';
+            return '<div style="margin-bottom:10px">'
+              +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
+              +'<span style="color:var(--blanc);font-weight:600">'+j.label+'</span>'
+              +'<span style="color:'+couleur+';font-weight:700">'+fmt(j.total)+' F &nbsp;('+j.nb+' cotis.)</span>'
+              +'</div>'
+              +'<div style="background:#1a2a3a;border-radius:4px;height:10px;overflow:hidden">'
+              +'<div style="height:100%;width:'+pct+'%;background:'+couleur+';border-radius:4px;transition:width .4s"></div>'
+              +'</div>'
+              +'</div>';
+          }).join('')
+          +'</div>';
+
+        // Tableau récapitulatif
+        var tableHTML = '<div style="overflow-x:auto">'
+          +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+          +'<thead><tr style="background:#111d2a">'
+          +'<th style="padding:8px;text-align:left;color:var(--grisC)">Jour</th>'
+          +'<th style="padding:8px;text-align:center;color:var(--grisC)">Nb cotisants</th>'
+          +'<th style="padding:8px;text-align:right;color:var(--grisC)">Montant encaisse</th>'
+          +'<th style="padding:8px;text-align:center;color:var(--grisC)">Meilleur mois</th>'
+          +'</tr></thead><tbody>'
+          + jours.map(function(k, i) {
+            var j = parJour[k];
+            var moisTop = j.details.reduce(function(acc, d) {
+              return !acc || d.montant > acc.montant ? d : acc;
+            }, null);
+            var bg = i%2===0?'#0a1628':'#0f1923';
+            return '<tr style="border-bottom:1px solid var(--border);background:'+bg+'">'
+              +'<td style="padding:8px;color:var(--blanc);font-weight:600">'+j.label+'</td>'
+              +'<td style="padding:8px;text-align:center;color:var(--bleu)">'+j.nb+'</td>'
+              +'<td style="padding:8px;text-align:right;color:var(--vert);font-weight:700">'+fmt(j.total)+' F</td>'
+              +'<td style="padding:8px;text-align:center;color:var(--or);font-size:11px">'+(moisTop?moisTop.nom:'—')+'</td>'
+              +'</tr>';
+          }).join('')
+          +'</tbody>'
+          // Ligne total
+          +'<tfoot><tr style="background:#0d5c3a">'
+          +'<td style="padding:8px;color:#fff;font-weight:800">TOTAL GLOBAL</td>'
+          +'<td style="padding:8px;text-align:center;color:#fff;font-weight:700">'
+          + jours.reduce(function(s,k){return s+parJour[k].nb;},0)
+          +'</td>'
+          +'<td style="padding:8px;text-align:right;color:#4eff9b;font-weight:800;font-size:14px">'
+          + fmt(jours.reduce(function(s,k){return s+parJour[k].total;},0))
+          +' F</td>'
+          +'<td style="padding:8px"></td>'
+          +'</tr></tfoot>'
+          +'</table></div>';
+
+        return graphHTML + tableHTML;
       })(),
     '</div>',
 
@@ -2480,6 +2563,162 @@ function imprimerCartesPVC(liste) {
 
   // Attendre le chargement des QR codes puis imprimer
   setTimeout(function(){ window.print(); }, 2000);
+}
+// ══════════════════════════════════════════════════
+
+
+// ══ EXPORT EXCEL ══
+function exporterExcel() {
+  var tousMois = TOUS_MOIS();
+  var MC = MOIS_COURANT();
+
+  // Construire les options de mois
+  var optionsMois = tousMois.slice(0, MC+1).map(function(m, i) {
+    return '<option value="'+i+'"'+(i===MC?' selected':'')+'>'+m+'</option>';
+  }).join('');
+
+  // Modal de sélection
+  var modalHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center" id="modal-excel">'
+    + '<div style="background:#0a1628;border:2px solid var(--or);border-radius:16px;padding:28px;max-width:440px;width:90%">'
+    + '<div style="font-weight:800;font-size:16px;color:var(--or);margin-bottom:6px">&#x1F4CA; Export Excel des cotisations</div>'
+    + '<div style="font-size:11px;color:var(--grisC);margin-bottom:18px">Le fichier contiendra tous les membres, leurs paiements mois par mois et les totaux.</div>'
+
+    + '<label style="font-size:12px;color:var(--grisC);font-weight:700;display:block;margin-bottom:6px">Exporter jusqu\'au mois :</label>'
+    + '<select id="excel-mois-fin" style="width:100%;padding:10px;background:#111d2a;color:var(--blanc);border:1px solid var(--or);border-radius:8px;font-size:13px;margin-bottom:18px">'
+    + optionsMois
+    + '</select>'
+
+    + '<label style="font-size:12px;color:var(--grisC);font-weight:700;display:block;margin-bottom:6px">Inclure les mois futurs payes en avance :</label>'
+    + '<select id="excel-inclure-futurs" style="width:100%;padding:10px;background:#111d2a;color:var(--blanc);border:1px solid #1a3a5a;border-radius:8px;font-size:13px;margin-bottom:20px">'
+    + '<option value="non">Non — Uniquement les mois passes</option>'
+    + '<option value="oui">Oui — Inclure les paiements anticipes</option>'
+    + '</select>'
+
+    + '<div style="display:flex;gap:10px">'
+    + '<button class="btn btn-vert" style="flex:1;padding:12px;font-size:13px" onclick="genererExcel()">&#x1F4CA; Générer le fichier Excel</button>'
+    + '<button class="btn btn-ghost" style="flex:1;padding:12px;font-size:13px" onclick="document.getElementById(&quot;modal-excel&quot;).remove()">Annuler</button>'
+    + '</div>'
+    + '</div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function genererExcel() {
+  var moisFinIdx = parseInt(document.getElementById('excel-mois-fin').value);
+  var inclureFuturs = document.getElementById('excel-inclure-futurs').value === 'oui';
+  document.getElementById('modal-excel').remove();
+
+  var tousMois = TOUS_MOIS();
+  var moisAffiches = [];
+
+  // Déterminer les colonnes de mois à afficher
+  if(inclureFuturs) {
+    // Tous les mois jusqu'à moisFinIdx + les mois futurs payés
+    for(var i=0; i<=moisFinIdx; i++) moisAffiches.push(i);
+    // Ajouter les mois futurs avec au moins 1 paiement
+    for(var i=moisFinIdx+1; i<CFG.nb_mois; i++) {
+      if(MEMBRES.some(function(m){ return m.paiements[i]&&m.paiements[i]!==0; })) {
+        moisAffiches.push(i);
+      }
+    }
+  } else {
+    for(var i=0; i<=moisFinIdx; i++) moisAffiches.push(i);
+  }
+
+  var nbMois = moisAffiches.length;
+
+  // ── Construire le contenu CSV (compatible Excel)
+  // Séparateur point-virgule pour Excel France/Afrique
+  var sep = ';';
+  var lignes = [];
+
+  // Titre
+  lignes.push(CFG.nom_eglise + ' - ' + CFG.nom_projet + sep.repeat(nbMois+2));
+  lignes.push('Export des cotisations - Jusqu\'au : ' + tousMois[moisFinIdx] + ' - Genere le : ' + new Date().toLocaleDateString('fr-FR') + sep.repeat(nbMois+2));
+  lignes.push('');
+
+  // En-tête
+  var headerRow = ['Code membre', 'Nom du membre', 'Cotisation/mois (F)'];
+  moisAffiches.forEach(function(i){ headerRow.push(tousMois[i]); });
+  headerRow.push('Total verse (F)');
+  headerRow.push('Mois payes');
+  lignes.push(headerRow.join(sep));
+
+  // Données membres
+  var totauxParMois = Array(nbMois).fill(0);
+  var totalGlobal = 0;
+  var totalMoisPayes = 0;
+
+  MEMBRES.forEach(function(m) {
+    var row = [m.id, m.nom, m.montant];
+    var totalMembre = 0;
+    var nbPayesMembre = 0;
+
+    moisAffiches.forEach(function(idx, col) {
+      var p = m.paiements[idx];
+      var paye = p && p !== 0;
+      if(paye) {
+        row.push('OUI');
+        totalMembre += m.montant;
+        nbPayesMembre++;
+        totauxParMois[col] += m.montant;
+      } else {
+        row.push('');
+      }
+    });
+
+    row.push(totalMembre);
+    row.push(nbPayesMembre);
+    totalGlobal += totalMembre;
+    totalMoisPayes += nbPayesMembre;
+    lignes.push(row.join(sep));
+  });
+
+  // Ligne vide
+  lignes.push('');
+
+  // Ligne totaux par mois
+  var rowTotaux = ['', 'TOTAL ENCAISSE PAR MOIS', ''];
+  totauxParMois.forEach(function(t){ rowTotaux.push(t > 0 ? t : ''); });
+  rowTotaux.push(totalGlobal);
+  rowTotaux.push(totalMoisPayes);
+  lignes.push(rowTotaux.join(sep));
+
+  // Ligne nombre de cotisants par mois
+  var rowNb = ['', 'NOMBRE DE COTISANTS', ''];
+  moisAffiches.forEach(function(idx) {
+    var nb = MEMBRES.filter(function(m){ return m.paiements[idx]&&m.paiements[idx]!==0; }).length;
+    rowNb.push(nb > 0 ? nb : '');
+  });
+  rowNb.push(MEMBRES.length + ' membres');
+  rowNb.push('');
+  lignes.push(rowNb.join(sep));
+
+  // Ligne taux de collecte par mois
+  var rowTaux = ['', 'TAUX DE COLLECTE (%)', ''];
+  moisAffiches.forEach(function(idx) {
+    var nb = MEMBRES.filter(function(m){ return m.paiements[idx]&&m.paiements[idx]!==0; }).length;
+    var taux = MEMBRES.length > 0 ? Math.round(nb/MEMBRES.length*100) : 0;
+    rowTaux.push(nb > 0 ? taux+'%' : '');
+  });
+  rowTaux.push('');
+  rowTaux.push('');
+  lignes.push(rowTaux.join(sep));
+
+  // ── Téléchargement
+  var csv = '\uFEFF' + lignes.join('\r\n'); // BOM UTF-8 pour Excel
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var dateStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = 'cotisations_ARR_' + dateStr + '_jusqu_' + tousMois[moisFinIdx].replace(/ /g,'_') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  notifier('&#x2705; Fichier Excel téléchargé — ' + MEMBRES.length + ' membres, ' + nbMois + ' mois');
 }
 // ══════════════════════════════════════════════════
 
