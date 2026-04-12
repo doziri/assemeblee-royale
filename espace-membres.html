@@ -264,9 +264,9 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
       <input id="login-code" type="text" placeholder="Ex : MBR-001" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px;font-weight:700;font-size:16px"/>
     </div>
     <div class="field">
-      <label>📱 Votre numéro WhatsApp</label>
+      <label>📱 Votre numéro de téléphone *</label>
       <input id="login-tel" type="tel" placeholder="Ex : +225 07 12 34 56"/>
-      <div style="color:var(--grisT);font-size:10px;margin-top:4px">Utilisé pour vérifier votre identité</div>
+      <div style="color:var(--or);font-size:10px;margin-top:4px;font-weight:600">&#x26A0; Obligatoire — doit correspondre au numéro enregistré par le comité</div>
     </div>
     <button class="btn btn-bleu btn-full" style="font-size:15px;padding:14px" onclick="tentativeConnexionMembre()">🔓 Accéder à mon dossier</button>
     <div id="login-err" style="display:none;color:var(--rouge);font-size:12px;text-align:center;margin-top:10px"></div>
@@ -470,34 +470,53 @@ function mettreAJourHeader() {
 // AUTHENTIFICATION MEMBRE
 // ══════════════════════════════════════════════════════════
 async function tentativeConnexionMembre() {
-  var code = (document.getElementById('login-code').value||'').trim().toUpperCase();
-  var tel  = (document.getElementById('login-tel').value||'').trim().replace(/\s/g,'');
+  var code  = (document.getElementById('login-code').value||'').trim().toUpperCase();
+  var tel   = (document.getElementById('login-tel').value||'').trim().replace(/\s/g,'');
   var errEl = document.getElementById('login-err');
 
-  if (!code) { showErr(errEl, 'Veuillez saisir votre code membre.'); return; }
+  // Vérifications de base
+  if (!code) { showErr(errEl, '&#x26A0; Veuillez saisir votre code membre.'); return; }
+  if (!tel)  { showErr(errEl, '&#x26A0; Veuillez saisir votre numéro de téléphone.'); return; }
 
-  // Charger données
-  setSyncIndicator('loading','Vérification...');
-  var ok = await chargerDepuisCloud();
+  // Charger données depuis le cloud
+  setSyncIndicator('loading', 'Vérification...');
+  chargerDepuisCloud().then(function() {
 
-  var membre = MEMBRES.find(function(m){ return m.id === code; });
-  if (!membre) { showErr(errEl, 'Code membre introuvable : ' + code); setSyncIndicator('err','Inconnu'); return; }
-
-  // Vérif numéro si renseigné
-  if (membre.tel && tel) {
-    var telMembre = membre.tel.replace(/\D/g,'');
-    var telSaisi  = tel.replace(/\D/g,'');
-    if (telMembre && telSaisi && !telMembre.endsWith(telSaisi.slice(-6)) && !telSaisi.endsWith(telMembre.slice(-6))) {
-      showErr(errEl, 'Numéro WhatsApp ne correspond pas à ce code.');
+    var membre = MEMBRES.find(function(m){ return m.id === code; });
+    if (!membre) {
+      showErr(errEl, '&#x26A0; Code membre introuvable. Vérifiez votre code ou contactez le comité.');
+      setSyncIndicator('err', 'Inconnu');
       return;
     }
-  }
 
-  // Connexion réussie
-  MEMBRE_CONNECTE = membre;
-  MODE_DECOUVERTE = false;
-  sessionStorage.setItem('membre_session', JSON.stringify({id: membre.id}));
-  ouvrirEspace();
+    // Vérification du numéro de téléphone — OBLIGATOIRE si le membre a un numéro enregistré
+    if (membre.tel) {
+      var telMembre = membre.tel.replace(/\D/g, '');
+      var telSaisi  = tel.replace(/\D/g, '');
+
+      // Comparaison souple : on compare les 8 derniers chiffres
+      // pour accepter les formats avec ou sans indicatif pays (+225...)
+      var suffixeMembre = telMembre.slice(-8);
+      var suffixeSaisi  = telSaisi.slice(-8);
+
+      if (suffixeMembre !== suffixeSaisi) {
+        showErr(errEl, '&#x26A0; Le numéro de téléphone ne correspond pas à ce code membre. Vérifiez et réessayez.');
+        setSyncIndicator('err', 'Erreur');
+        return;
+      }
+    }
+    // Si le membre n'a pas de numéro enregistré → accès libre (cas exceptionnel)
+
+    // Connexion réussie
+    MEMBRE_CONNECTE = membre;
+    MODE_DECOUVERTE = false;
+    sessionStorage.setItem('temple_session_membre', JSON.stringify({ id: membre.id }));
+    ouvrirEspace();
+
+  }).catch(function() {
+    showErr(errEl, '&#x26A0; Erreur de connexion. Vérifiez votre connexion internet et réessayez.');
+    setSyncIndicator('err', 'Erreur');
+  });
 }
 
 function accesDecouverte() {
