@@ -167,17 +167,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <input id="login-user" type="text" placeholder="Ex : jean.paul" autocapitalize="none" style="background:#111d2a;border:1px solid #1a2a3a;border-radius:10px;padding:12px 14px;color:#ddeeff;font-size:14px;width:100%;outline:none;font-family:inherit;margin-bottom:10px"/>
     <div style="color:#8899aa;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Mot de passe</div>
     <input id="login-pass" type="password" placeholder="••••••••" style="background:#111d2a;border:1px solid #1a2a3a;border-radius:10px;padding:12px 14px;color:#ddeeff;font-size:15px;letter-spacing:3px;width:100%;outline:none;font-family:inherit;margin-bottom:14px"/>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 12px;background:#0a1828;border-radius:8px;border:1px solid #1a3a5a;cursor:pointer" onclick="toggleRememberComite()">
+      <div id="toggle-remember-comite" style="width:44px;height:24px;min-width:44px;background:#1a3a5a;border-radius:12px;position:relative;transition:background 0.3s">
+        <div id="toggle-knob-comite" style="width:20px;height:20px;background:#8899aa;border-radius:50%;position:absolute;top:2px;left:2px;transition:all 0.3s"></div>
+      </div>
+      <input type="checkbox" id="remember-comite" style="display:none"/>
+      <span style="color:#8899aa;font-size:11px;user-select:none">Se souvenir de moi <span style="color:#556677;font-size:10px">(30 jours)</span></span>
+    </div>
     <button id="btn-connexion" style="background:linear-gradient(135deg,#0d5c3a,#164a30);border:1px solid rgba(78,255,155,0.3);color:#4eff9b;border-radius:10px;padding:13px;width:100%;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">🔓 Se connecter</button>
     <div id="login-err" style="display:none;color:#ff6b6b;font-size:12px;text-align:center;margin-top:10px"></div>
   </div>
   <div id="login-admin" style="display:none;background:#0a1628;border:1px solid rgba(100,212,255,0.2);border-radius:16px;padding:24px;width:100%;max-width:340px">
     <div style="color:#64d4ff;font-weight:700;font-size:13px;margin-bottom:14px">🛡 Connexion Administrateur</div>
     <input id="login-admin-pass" type="password" placeholder="Code admin" style="background:#111d2a;border:1px solid #1a2a3a;border-radius:10px;padding:12px 14px;color:#ddeeff;font-size:15px;letter-spacing:3px;width:100%;outline:none;font-family:inherit;margin-bottom:14px"/>
-    <button<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:#0a1828;border-radius:8px;border:1px solid #1a3a5a">
-      <input type="checkbox" id="remember-admin" style="width:16px;height:16px;cursor:pointer;accent-color:#64d4ff"/>
-      <label for="remember-admin" style="color:#8899aa;font-size:11px;cursor:pointer;user-select:none">Se souvenir de moi <span style="color:#556677;font-size:10px">(30 jours)</span></label>
-    </div>
-     id="btn-admin-connexion" style="background:linear-gradient(135deg,#0a1e3a,#0d2a4a);border:1px solid rgba(100,212,255,0.3);color:#64d4ff;border-radius:10px;padding:13px;width:100%;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">🛡 Accès admin</button>
+    <button
+    <button id="btn-admin-connexion" style="background:linear-gradient(135deg,#0a1e3a,#0d2a4a);border:1px solid rgba(100,212,255,0.3);color:#64d4ff;border-radius:10px;padding:13px;width:100%;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">🛡 Accès admin</button>
     <div id="login-admin-err" style="display:none;color:#ff6b6b;font-size:12px;text-align:center;margin-top:10px"></div>
     <div style="margin-top:14px;text-align:center">
       <button onclick="reinitialiserComptes()" style="background:none;border:none;color:#334455;font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline">⚠ Réinitialiser les accès</button>
@@ -512,9 +516,8 @@ async function tentativeConnexionAdmin() {
   var h=await sha256(pass);
   if (h===comptes.admin.hash) {
     ROLE_ACTUEL='admin'; COMPTE_ACTUEL={id:'admin',nom:comptes.admin.nom,role:'admin'};
-    var remA = document.getElementById('remember-admin') && document.getElementById('remember-admin').checked;
-    var sessDataA = JSON.stringify(Object.assign({}, COMPTE_ACTUEL, {expire: remA ? Date.now()+30*24*60*60*1000 : null}));
-    if(remA) localStorage.setItem('temple_session', sessDataA);
+    // Admin : session courte uniquement (pas de Se souvenir pour l'Admin)
+    var sessDataA = JSON.stringify(Object.assign({}, COMPTE_ACTUEL, {expire: null}));
     sessionStorage.setItem('temple_session', sessDataA);
     document.getElementById('login-admin-pass').value=''; ouvrirApp();
   } else { showLoginErr(errEl,'Code administrateur incorrect'); document.getElementById('login-admin-pass').value=''; }
@@ -2953,6 +2956,26 @@ function confirmerRestauration(key) {
   } catch(e) { notifier('&#x26A0; Erreur lors de la restauration','danger'); }
 }
 // ────────────────────────────────────────────────────
+
+
+// ── TOGGLES SE SOUVENIR DE MOI ──
+function toggleRememberComite() {
+  var cb     = document.getElementById('remember-comite');
+  var toggle = document.getElementById('toggle-remember-comite');
+  var knob   = document.getElementById('toggle-knob-comite');
+  if (!cb || !toggle || !knob) return;
+  cb.checked = !cb.checked;
+  if (cb.checked) {
+    toggle.style.background = '#0d5c3a';
+    knob.style.background   = '#4eff9b';
+    knob.style.left         = '22px';
+  } else {
+    toggle.style.background = '#1a3a5a';
+    knob.style.background   = '#8899aa';
+    knob.style.left         = '2px';
+  }
+}
+// ────────────────────────────────
 
 if('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
