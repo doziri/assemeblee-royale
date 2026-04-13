@@ -173,7 +173,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   <div id="login-admin" style="display:none;background:#0a1628;border:1px solid rgba(100,212,255,0.2);border-radius:16px;padding:24px;width:100%;max-width:340px">
     <div style="color:#64d4ff;font-weight:700;font-size:13px;margin-bottom:14px">🛡 Connexion Administrateur</div>
     <input id="login-admin-pass" type="password" placeholder="Code admin" style="background:#111d2a;border:1px solid #1a2a3a;border-radius:10px;padding:12px 14px;color:#ddeeff;font-size:15px;letter-spacing:3px;width:100%;outline:none;font-family:inherit;margin-bottom:14px"/>
-    <button id="btn-admin-connexion" style="background:linear-gradient(135deg,#0a1e3a,#0d2a4a);border:1px solid rgba(100,212,255,0.3);color:#64d4ff;border-radius:10px;padding:13px;width:100%;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">🛡 Accès admin</button>
+    <button<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:#0a1828;border-radius:8px;border:1px solid #1a3a5a">
+      <input type="checkbox" id="remember-admin" style="width:16px;height:16px;cursor:pointer;accent-color:#64d4ff"/>
+      <label for="remember-admin" style="color:#8899aa;font-size:11px;cursor:pointer;user-select:none">Se souvenir de moi <span style="color:#556677;font-size:10px">(30 jours)</span></label>
+    </div>
+     id="btn-admin-connexion" style="background:linear-gradient(135deg,#0a1e3a,#0d2a4a);border:1px solid rgba(100,212,255,0.3);color:#64d4ff;border-radius:10px;padding:13px;width:100%;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">🛡 Accès admin</button>
     <div id="login-admin-err" style="display:none;color:#ff6b6b;font-size:12px;text-align:center;margin-top:10px"></div>
     <div style="margin-top:14px;text-align:center">
       <button onclick="reinitialiserComptes()" style="background:none;border:none;color:#334455;font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline">⚠ Réinitialiser les accès</button>
@@ -492,7 +496,11 @@ async function tentativeConnexion() {
   var compte=(comptes.comite||[]).find(function(c){ return c.id===userId&&c.hash===h; });
   if (compte) {
     ROLE_ACTUEL='comite'; COMPTE_ACTUEL={id:compte.id,nom:compte.nom,role:'comite'};
-    sessionStorage.setItem('temple_session',JSON.stringify(COMPTE_ACTUEL)); ouvrirApp();
+    var remC = document.getElementById('remember-comite') && document.getElementById('remember-comite').checked;
+    var sessDataC = JSON.stringify(Object.assign({}, COMPTE_ACTUEL, {expire: remC ? Date.now()+30*24*60*60*1000 : null}));
+    if(remC) localStorage.setItem('temple_session', sessDataC);
+    sessionStorage.setItem('temple_session', sessDataC);
+    ouvrirApp();
   } else { showLoginErr(errEl,'Identifiant ou mot de passe incorrect'); document.getElementById('login-pass').value=''; }
 }
 
@@ -504,7 +512,10 @@ async function tentativeConnexionAdmin() {
   var h=await sha256(pass);
   if (h===comptes.admin.hash) {
     ROLE_ACTUEL='admin'; COMPTE_ACTUEL={id:'admin',nom:comptes.admin.nom,role:'admin'};
-    sessionStorage.setItem('temple_session',JSON.stringify(COMPTE_ACTUEL));
+    var remA = document.getElementById('remember-admin') && document.getElementById('remember-admin').checked;
+    var sessDataA = JSON.stringify(Object.assign({}, COMPTE_ACTUEL, {expire: remA ? Date.now()+30*24*60*60*1000 : null}));
+    if(remA) localStorage.setItem('temple_session', sessDataA);
+    sessionStorage.setItem('temple_session', sessDataA);
     document.getElementById('login-admin-pass').value=''; ouvrirApp();
   } else { showLoginErr(errEl,'Code administrateur incorrect'); document.getElementById('login-admin-pass').value=''; }
 }
@@ -540,7 +551,7 @@ function rafraichirBarreRole() {
 function seDeconnecter() {
   if (syncTimer) clearInterval(syncTimer);
   journaliser('DÉCONNEXION',(COMPTE_ACTUEL?COMPTE_ACTUEL.nom:'?')+' déconnecté');
-  sessionStorage.removeItem('temple_session'); COMPTE_ACTUEL=null; ROLE_ACTUEL=null;
+  localStorage.removeItem('temple_session'); sessionStorage.removeItem('temple_session'); COMPTE_ACTUEL=null; ROLE_ACTUEL=null;
   document.getElementById('login-overlay').style.display='flex';
   document.getElementById('login-user').value=''; document.getElementById('login-pass').value='';
   document.getElementById('login-admin-pass').value='';
@@ -2973,12 +2984,19 @@ document.addEventListener('DOMContentLoaded', function() {
   charger(); chargerLogo(); mettreAJourHeader(); setTimeout(sauvegardeAutomatique, 3000);
   afficherVue();
 
-  var sess = sessionStorage.getItem('temple_session');
+  var sess = localStorage.getItem('temple_session') || sessionStorage.getItem('temple_session');
   if (sess) {
     try {
-      COMPTE_ACTUEL = JSON.parse(sess); ROLE_ACTUEL = COMPTE_ACTUEL.role;
-      chargerDepuisCloud().then(function(){ ouvrirApp(); }).catch(function(){ ouvrirApp(); });
-    } catch(e) { sessionStorage.removeItem('temple_session'); choisirRole('comite'); }
+      var sessObj = JSON.parse(sess);
+      if (sessObj.expire && Date.now() > sessObj.expire) {
+        localStorage.removeItem('temple_session');
+        sessionStorage.removeItem('temple_session');
+        chargerDepuisCloud().catch(function(){}); choisirRole('comite');
+      } else {
+        COMPTE_ACTUEL = sessObj; ROLE_ACTUEL = COMPTE_ACTUEL.role;
+        chargerDepuisCloud().then(function(){ ouvrirApp(); }).catch(function(){ ouvrirApp(); });
+      }
+    } catch(e) { localStorage.removeItem('temple_session'); sessionStorage.removeItem('temple_session'); choisirRole('comite'); }
   } else {
     chargerDepuisCloud().catch(function(){});
     choisirRole('comite');

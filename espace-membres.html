@@ -1,3 +1,12 @@
+function quitterEspace(){
+  MEMBRE_CONNECTE = null;
+  MODE_DECOUVERTE = false;
+  // Effacer les deux storages
+  localStorage.removeItem('temple_session_membre');
+  sessionStorage.removeItem('temple_session_membre');
+  // Recharger la page pour afficher le login
+  location.reload();
+}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -268,6 +277,12 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
       <input id="login-tel" type="tel" placeholder="Ex : +225 07 12 34 56"/>
       <div style="color:var(--or);font-size:10px;margin-top:4px;font-weight:600">&#x26A0; Obligatoire — doit correspondre au numéro enregistré par le comité</div>
     </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px;background:#0a1828;border-radius:8px;border:1px solid #1a3a5a">
+      <input type="checkbox" id="remember-me" style="width:18px;height:18px;cursor:pointer;accent-color:#64d4ff"/>
+      <label for="remember-me" style="color:var(--grisC);font-size:12px;cursor:pointer;user-select:none">
+        Se souvenir de moi <span style="color:var(--grisT);font-size:10px">(rester connecté 30 jours)</span>
+      </label>
+    </div>
     <button class="btn btn-bleu btn-full" style="font-size:15px;padding:14px" onclick="tentativeConnexionMembre()">🔓 Accéder à mon dossier</button>
     <div id="login-err" style="display:none;color:var(--rouge);font-size:12px;text-align:center;margin-top:10px"></div>
     <div class="sep"></div>
@@ -510,7 +525,19 @@ async function tentativeConnexionMembre() {
     // Connexion réussie
     MEMBRE_CONNECTE = membre;
     MODE_DECOUVERTE = false;
-    sessionStorage.setItem('temple_session_membre', JSON.stringify({ id: membre.id }));
+
+    var rememberMe = document.getElementById('remember-me') && document.getElementById('remember-me').checked;
+    var sessionData = JSON.stringify({
+      id: membre.id,
+      expire: rememberMe ? (Date.now() + 30*24*60*60*1000) : null // 30 jours ou session uniquement
+    });
+
+    if (rememberMe) {
+      // Stocker dans localStorage pour persistance longue (30 jours)
+      localStorage.setItem('temple_session_membre', sessionData);
+    }
+    // Toujours stocker dans sessionStorage pour la session courante
+    sessionStorage.setItem('temple_session_membre', sessionData);
     ouvrirEspace();
 
   }).catch(function() {
@@ -1111,14 +1138,34 @@ document.addEventListener('DOMContentLoaded', function() {
   charger(); chargerLogo();
   attacherNavBtns();
   
-  var sess = sessionStorage.getItem('temple_session_membre');
+  // Vérifier d'abord localStorage (session longue) puis sessionStorage
+  var sess = localStorage.getItem('temple_session_membre') || sessionStorage.getItem('temple_session_membre');
   if (sess) {
     try {
       var data = JSON.parse(sess);
-      MEMBRE_CONNECTE = data;
-      chargerDepuisCloud().then(function(){ ouvrirEspace(); }).catch(function(){ ouvrirEspace(); });
+      // Vérifier si la session a expiré
+      if (data.expire && Date.now() > data.expire) {
+        localStorage.removeItem('temple_session_membre');
+        sessionStorage.removeItem('temple_session_membre');
+        chargerDepuisCloud().catch(function(){});
+      } else {
+        // Recharger les données membres depuis le cloud puis retrouver le membre
+        chargerDepuisCloud().then(function(){
+          var membre = MEMBRES.find(function(m){ return m.id === data.id; });
+          if (membre) {
+            MEMBRE_CONNECTE = membre;
+            MODE_DECOUVERTE = false;
+            ouvrirEspace();
+          } else {
+            localStorage.removeItem('temple_session_membre');
+            sessionStorage.removeItem('temple_session_membre');
+          }
+        }).catch(function(){});
+      }
     } catch(e) {
+      localStorage.removeItem('temple_session_membre');
       sessionStorage.removeItem('temple_session_membre');
+      chargerDepuisCloud().catch(function(){});
     }
   } else {
     chargerDepuisCloud().catch(function(){});
