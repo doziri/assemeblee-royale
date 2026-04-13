@@ -277,11 +277,13 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
       <input id="login-tel" type="tel" placeholder="Ex : +225 07 12 34 56"/>
       <div style="color:var(--or);font-size:10px;margin-top:4px;font-weight:600">&#x26A0; Obligatoire — doit correspondre au numéro enregistré par le comité</div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px;background:#0a1828;border-radius:8px;border:1px solid #1a3a5a">
-      <input type="checkbox" id="remember-me" style="width:18px;height:18px;cursor:pointer;accent-color:#64d4ff"/>
-      <label for="remember-me" style="color:var(--grisC);font-size:12px;cursor:pointer;user-select:none">
-        Se souvenir de moi <span style="color:var(--grisT);font-size:10px">(rester connecté 30 jours)</span>
-      </label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px 12px;background:#0a1828;border-radius:8px;border:1px solid #1a3a5a;cursor:pointer" onclick="toggleRememberMe()">
+      <!-- Toggle switch visuel -->
+      <div id="toggle-remember" style="width:44px;height:24px;min-width:44px;background:#1a3a5a;border-radius:12px;position:relative;transition:background 0.3s">
+        <div id="toggle-knob" style="width:20px;height:20px;background:#8899aa;border-radius:50%;position:absolute;top:2px;left:2px;transition:all 0.3s"></div>
+      </div>
+      <input type="checkbox" id="remember-me" style="display:none"/>
+      <span style="color:var(--grisC);font-size:12px;user-select:none;line-height:1.4">Se souvenir de moi <span style="color:var(--grisT);font-size:10px">(rester connecte 30 jours)</span></span>
     </div>
     <button class="btn btn-bleu btn-full" style="font-size:15px;padding:14px" onclick="tentativeConnexionMembre()">🔓 Accéder à mon dossier</button>
     <div id="login-err" style="display:none;color:var(--rouge);font-size:12px;text-align:center;margin-top:10px"></div>
@@ -484,7 +486,24 @@ function mettreAJourHeader() {
 // ══════════════════════════════════════════════════════════
 // AUTHENTIFICATION MEMBRE
 // ══════════════════════════════════════════════════════════
-async function tentativeConnexionMembre() {
+async function toggleRememberMe() {
+  var cb = document.getElementById('remember-me');
+  var toggle = document.getElementById('toggle-remember');
+  var knob = document.getElementById('toggle-knob');
+  if(!cb || !toggle || !knob) return;
+  cb.checked = !cb.checked;
+  if (cb.checked) {
+    toggle.style.background = '#1565C0';
+    knob.style.background = '#64d4ff';
+    knob.style.left = '22px';
+  } else {
+    toggle.style.background = '#1a3a5a';
+    knob.style.background = '#8899aa';
+    knob.style.left = '2px';
+  }
+}
+
+function tentativeConnexionMembre() {
   var code  = (document.getElementById('login-code').value||'').trim().toUpperCase();
   var tel   = (document.getElementById('login-tel').value||'').trim().replace(/\s/g,'');
   var errEl = document.getElementById('login-err');
