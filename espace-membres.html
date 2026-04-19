@@ -264,9 +264,9 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
       <input id="login-code" type="text" placeholder="Ex : MBR-001" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px;font-weight:700;font-size:16px"/>
     </div>
     <div class="field">
-      <label>📱 Votre numéro de téléphone *</label>
+      <label>📱 Votre numéro de téléphone <span style="font-size:10px;color:var(--grisT)">(si enregistré par le comité)</span></label>
       <input id="login-tel" type="tel" placeholder="Ex : +225 07 12 34 56"/>
-      <div style="color:var(--or);font-size:10px;margin-top:4px;font-weight:600">&#x26A0; Obligatoire — doit correspondre au numéro enregistré par le comité</div>
+      <div style="color:var(--grisT);font-size:10px;margin-top:4px">Si votre numéro est enregistré, il doit correspondre. Sinon, laissez vide.</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px 12px;background:#0a1828;border-radius:8px;border:1px solid #1a3a5a;cursor:pointer" onclick="toggleRememberMe()">
       <!-- Toggle switch visuel -->
@@ -499,9 +499,8 @@ function tentativeConnexionMembre() {
   var tel   = (document.getElementById('login-tel').value||'').trim().replace(/\s/g,'');
   var errEl = document.getElementById('login-err');
 
-  // Vérifications de base
+  // Vérification code obligatoire
   if (!code) { showErr(errEl, '&#x26A0; Veuillez saisir votre code membre.'); return; }
-  if (!tel)  { showErr(errEl, '&#x26A0; Veuillez saisir votre numéro de téléphone.'); return; }
 
   // Charger données depuis le cloud
   setSyncIndicator('loading', 'Vérification...');
@@ -514,23 +513,27 @@ function tentativeConnexionMembre() {
       return;
     }
 
-    // Vérification du numéro de téléphone — OBLIGATOIRE si le membre a un numéro enregistré
-    if (membre.tel) {
-      var telMembre = membre.tel.replace(/\D/g, '');
-      var telSaisi  = tel.replace(/\D/g, '');
-
-      // Comparaison souple : on compare les 8 derniers chiffres
-      // pour accepter les formats avec ou sans indicatif pays (+225...)
-      var suffixeMembre = telMembre.slice(-8);
-      var suffixeSaisi  = telSaisi.slice(-8);
-
-      if (suffixeMembre !== suffixeSaisi) {
-        showErr(errEl, '&#x26A0; Le numéro de téléphone ne correspond pas à ce code membre. Vérifiez et réessayez.');
-        setSyncIndicator('err', 'Erreur');
-        return;
-      }
+    // Vérification du numéro de téléphone
+    if (!membre.tel) {
+      // Membre sans numéro enregistré → accès bloqué
+      showErr(errEl, '&#x26A0; Votre numéro de téléphone n\'est pas encore enregistré. Contactez le comité pour le faire enregistrer et accéder à votre espace.');
+      setSyncIndicator('err', 'Bloqué');
+      return;
     }
-    // Si le membre n'a pas de numéro enregistré → accès libre (cas exceptionnel)
+    // Membre avec numéro → vérification obligatoire
+    if (!tel) {
+      showErr(errEl, '&#x26A0; Veuillez saisir votre numéro de téléphone.');
+      return;
+    }
+    var telMembre = membre.tel.replace(/\D/g, '');
+    var telSaisi  = tel.replace(/\D/g, '');
+    var suffixeMembre = telMembre.slice(-8);
+    var suffixeSaisi  = telSaisi.slice(-8);
+    if (suffixeMembre !== suffixeSaisi) {
+      showErr(errEl, '&#x26A0; Le numéro de téléphone ne correspond pas à ce code membre. Vérifiez et réessayez.');
+      setSyncIndicator('err', 'Erreur');
+      return;
+    }
 
     // Connexion réussie
     MEMBRE_CONNECTE = membre;
