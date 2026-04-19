@@ -1511,13 +1511,13 @@ function ouvrirValidation(id){
   // Trouver le premier mois impayé automatiquement
   var premierImpaye=-1;
   for(var i=0;i<=MC;i++){
-    if(!MEMBRE_VALIDATION.paiements[i]){premierImpaye=i;break;}
+    var pi=MEMBRE_VALIDATION.paiements[i]; if(!pi||pi===0){premierImpaye=i;break;}
   }
   // Si tous les mois dus sont payés, pointer sur le mois suivant
   if(premierImpaye===-1){
     // Chercher premier mois futur non payé
     for(var j=MC+1;j<CFG.nb_mois;j++){
-      if(!MEMBRE_VALIDATION.paiements[j]){premierImpaye=j;break;}
+      var pj=MEMBRE_VALIDATION.paiements[j]; if(!pj||pj===0){premierImpaye=j;break;}
     }
   }
   MOIS_SELECTIONNES = premierImpaye>=0 ? [premierImpaye] : [];
@@ -1531,9 +1531,9 @@ function vueValidation(){
   var s=statutMembre(m),MC=MOIS_COURANT();
 
   // Mois impayés jusqu'au mois courant (retards + courant)
-  var moisDus=m.paiements.map(function(p,i){return(!p&&i<=MC)?i:-1;}).filter(function(i){return i>=0;});
+  var moisDus=m.paiements.map(function(p,i){return((!p||p===0)&&i<=MC)?i:-1;}).filter(function(i){return i>=0;});
   // Mois futurs non payés
-  var moisFuturs=m.paiements.map(function(p,i){return(!p&&i>MC)?i:-1;}).filter(function(i){return i>=0;});
+  var moisFuturs=m.paiements.map(function(p,i){return((!p||p===0)&&i>MC)?i:-1;}).filter(function(i){return i>=0;});
   // Vérification : aucun mois déjà payé ne doit être dans MOIS_SELECTIONNES
   // Exclure de MOIS_SELECTIONNES tout mois déjà payé (timestamp > 0 ou valeur truthy)
   MOIS_SELECTIONNES = MOIS_SELECTIONNES.filter(function(i){
@@ -1678,8 +1678,9 @@ function deselectionnerTout(){
 }
 
 function toggleMoisSelection(idx){
-  // Bloquer si le mois est deja paye
-  if(MEMBRE_VALIDATION && MEMBRE_VALIDATION.paiements[idx]){
+  // Bloquer si le mois est deja paye (timestamp, true, ou valeur != 0)
+  var pExistant = MEMBRE_VALIDATION && MEMBRE_VALIDATION.paiements[idx];
+  if(pExistant && pExistant !== 0) {
     notifier('&#x26A0; Ce mois est deja paye !','danger');
     return;
   }
