@@ -1719,9 +1719,31 @@ function confirmerValidation(){var m=MEMBRE_VALIDATION;if(!m||!MOIS_SELECTIONNES
     var mb=MEMBRES.find(function(x){return x.id===m.id;});
     if(mb) mb.paiements[idx]=now.getTime(); // Stocker timestamp de paiement
   });
-  // Vider la sélection après confirmation
+  // Créer le reçu AVANT de vider MOIS_SELECTIONNES
+  var moisPayesCopie = MOIS_SELECTIONNES.slice();
+  var montantTotalCopie = MOIS_SELECTIONNES.length * m.montant;
+  var montantRecuCopie = MONTANT_RECU;
+
+  sauvegarder();
+  sauvegarderCloud();
+
+  RECU_COURANT = {
+    id: 'REC-'+now.getTime(),
+    membre: Object.assign({}, m),
+    moisPayes: moisPayesCopie,
+    montantTotal: montantTotalCopie,
+    montantRecu: montantRecuCopie,
+    date: now.toLocaleDateString('fr-FR', {weekday:'long', year:'numeric', month:'long', day:'numeric'}),
+    heure: now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})
+  };
+
+  // Vider la sélection après avoir sauvegardé le reçu
   MOIS_SELECTIONNES = [];
-  MONTANT_RECU = 0;sauvegarder();sauvegarderCloud();RECU_COURANT={id:'REC-'+now.getTime(),membre:Object.assign({},m),moisPayes:MOIS_SELECTIONNES.slice(),montantTotal:MOIS_SELECTIONNES.length*m.montant,montantRecu:MONTANT_RECU,date:now.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),heure:now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};VUE_ACTUELLE='recu';afficherVue();}
+  MONTANT_RECU = 0;
+
+  VUE_ACTUELLE = 'recu';
+  afficherVue();
+}
 
 // REÇU
 function vueRecu(){var r=RECU_COURANT;if(!r)return'';var m=MEMBRES.find(function(x){return x.id===r.membre.id;}),s=m?statutMembre(m):'ajour';var msg='&#x1F9FE; *REÇU DE COTISATION – '+CFG.nom_eglise.toUpperCase()+'*\n\n&#x1F464; Membre : '+r.membre.nom+'\n&#x1F194; Code : '+r.membre.id+'\n&#x1F4C5; Date : '+r.date+' à '+r.heure+'\n\n&#x1F4B0; Mois validés :\n'+r.moisPayes.map(function(i){return '  • '+TOUS_MOIS()[i]+' – '+fmt(r.membre.montant);}).join('\n')+'\n\n&#x2705; TOTAL VALIDÉ : '+fmt(r.montantTotal)+'\n\n&#x1F64F; Que Dieu bénisse votre engagement !';var waLink=r.membre.tel?'<a href="https://wa.me/'+r.membre.tel.replace(/\D/g,'')+'?text='+encodeURIComponent(msg)+'" target="_blank" class="btn btn-primary" style="flex:1;text-decoration:none">&#x1F4F2; WhatsApp</a>':'';return['<div style="background:linear-gradient(135deg,#0a1e14,#0d3a1a);border:1px solid rgba(78,255,155,0.3);border-radius:14px;padding:28px 20px;text-align:center;margin-bottom:14px"><div style="font-size:52px;margin-bottom:12px">&#x2705;</div><div style="color:var(--vert);font-weight:900;font-size:22px;margin-bottom:6px">Paiement validé !</div><div style="color:var(--bleu);font-weight:700;font-size:15px;margin-top:10px">'+r.id+'</div></div>','<div style="border:2px solid #1a3a5a;border-radius:14px;padding:20px;margin-bottom:14px">',(LOGO_DATA?'<div style="text-align:center;margin-bottom:12px"><img src="'+LOGO_DATA+'" style="height:50px;border-radius:10px;object-fit:contain"/></div>':''),'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px"><div><div style="font-weight:800;font-size:16px">'+r.membre.nom+'</div><div style="color:var(--grisC);font-size:12px;margin-top:2px">'+r.membre.id+(r.membre.tel?' · '+r.membre.tel:'')+'</div><div style="margin-top:6px">'+badgeHTML(s)+'</div></div><div class="qr-wrap" id="qr-recu-container"></div></div>','<div style="background:#111d2a;border-radius:10px;padding:12px 14px;margin-bottom:14px">'+r.moisPayes.map(function(idx){return'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>'+TOUS_MOIS()[idx]+'</span><span style="color:var(--vert);font-weight:600">'+fmt(r.membre.montant)+'</span></div>';}).join('')+'</div>','<div style="display:flex;justify-content:space-between;align-items:center;background:var(--vertD);border-radius:10px;padding:14px 16px;border:1px solid rgba(78,255,155,0.2)"><div><div style="color:var(--grisC);font-size:11px">TOTAL VALIDÉ</div><div style="color:var(--vert);font-weight:900;font-size:22px">'+fmt(r.montantTotal)+'</div></div><div style="text-align:right"><div style="color:var(--grisC);font-size:11px">'+r.date+'</div><div style="color:var(--grisC);font-size:11px">'+r.heure+'</div></div></div>','</div>','<div class="card" style="margin-bottom:14px"><div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:12px">&#x1F4F1; PARTAGER</div><div style="background:#0d1e14;border:1px solid #1a3a1a;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#aaccaa;font-size:12px;font-family:monospace;line-height:1.7;white-space:pre-wrap" id="msg-whatsapp">'+msg+'</div><div style="display:flex;gap:10px"><button class="btn btn-primary" style="flex:1" id="btn-copier-msg">&#x1F4CB; Copier</button>'+waLink+'</div><div id="copie-ok" style="display:none;color:var(--vert);font-size:12px;text-align:center;margin-top:8px">&#x2714; Message copié !</div></div>','<div style="display:flex;gap:10px"><button class="btn btn-primary" style="flex:1;padding:14px" onclick="changerVue(&apos;scanner&apos;)">&#x1F4F7; Scanner suivant</button><button class="btn btn-ghost" style="flex:1;padding:14px" onclick="changerVue(\'membres\')">&#x1F465; Membres</button></div>'].join('');}
