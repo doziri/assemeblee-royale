@@ -1706,50 +1706,8 @@ function toggleMoisSelection(idx){
   MONTANT_RECU = MOIS_SELECTIONNES.length * (MEMBRE_VALIDATION ? MEMBRE_VALIDATION.montant : 0);
   var mr = document.getElementById('montant-recu'); if(mr) mr.value = MONTANT_RECU;
 
-  // ── Mise à jour visuelle de TOUTES les cases mois
-  var MC = MOIS_COURANT();
-  for(var i = 0; i < CFG.nb_mois; i++) {
-    var div = document.getElementById('mois-sel-'+i);
-    if(!div) continue;
-    var sel = MOIS_SELECTIONNES.indexOf(i) >= 0;
-    var paye = MEMBRE_VALIDATION && MEMBRE_VALIDATION.paiements[i] && MEMBRE_VALIDATION.paiements[i] !== 0;
-    var isCourant = i === MC;
-
-    if(paye) {
-      // Mois déjà payé — vert fixe
-      div.style.background = 'var(--vertD)';
-      div.style.border = '1px solid var(--vert)';
-      div.style.opacity = '0.6';
-      div.style.cursor = 'default';
-    } else if(sel) {
-      // Mois sélectionné pour paiement — vert vif + coche
-      div.style.background = '#0d4a2a';
-      div.style.border = '2px solid var(--vert)';
-      div.style.opacity = '1';
-      div.style.cursor = 'pointer';
-      // Ajouter coche visuelle
-      var checkEl = div.querySelector('.mois-check');
-      if(!checkEl) {
-        var check = document.createElement('span');
-        check.className = 'mois-check';
-        check.textContent = ' ✔';
-        check.style.color = 'var(--vert)';
-        check.style.fontWeight = '700';
-        div.appendChild(check);
-      }
-    } else {
-      // Mois non sélectionné
-      div.style.background = '#111d2a';
-      div.style.border = '1px solid ' + (isCourant ? 'var(--or)' : '#2a3a4a');
-      div.style.opacity = '1';
-      div.style.cursor = 'pointer';
-      // Supprimer la coche si elle existe
-      var checkEl = div.querySelector('.mois-check');
-      if(checkEl) checkEl.remove();
-    }
-  }
-
-  majRecap();
+  // Recréer le HTML de la vue pour refléter les nouvelles sélections
+  afficherVue();
 }
 function majRecap(){var m=MEMBRE_VALIDATION;if(!m)return;var total=MOIS_SELECTIONNES.length*m.montant,recu=MONTANT_RECU;var recap=document.getElementById('recap-content'),ligne=document.getElementById('recap-ligne');if(ligne)ligne.innerHTML='<div style="display:flex;justify-content:space-between"><span style="color:var(--grisC)">Attendu :</span><span style="color:var(--or);font-weight:700">'+fmt(total)+'</span></div>'+'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--grisC)">Reçu :</span><span style="color:'+(recu>=total?'var(--vert)':'var(--rouge)')+';font-weight:700">'+fmt(recu)+'</span></div>'+(recu<total&&recu>0?'<div style="background:var(--orD);border:1px solid rgba(255,179,71,0.3);border-radius:8px;padding:7px 12px;margin-top:8px;color:var(--or);font-size:11px">&#x26A0; Reste '+fmt(total-recu)+'</div>':'');if(recap)recap.innerHTML='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Membre</span><span style="font-weight:600">'+m.nom+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Mois</span><span style="color:var(--vert);font-weight:600">'+MOIS_SELECTIONNES.length+' mois</span></div>'+'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(78,255,155,0.1)"><span style="color:var(--grisC)">Périodes</span><span style="font-size:11px;color:var(--blanc)">'+MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ')+'</span></div>'+'<div style="display:flex;justify-content:space-between;padding:10px 0 0"><span style="color:var(--grisC);font-weight:700">TOTAL</span><span style="color:var(--vert);font-weight:900;font-size:18px">'+fmt(total)+'</span></div>';var btn=document.getElementById('btn-confirmer');if(btn){btn.disabled=MOIS_SELECTIONNES.length===0;btn.style.opacity=MOIS_SELECTIONNES.length===0?'0.4':'1';}}
 function confirmerValidation(){var m=MEMBRE_VALIDATION;if(!m||!MOIS_SELECTIONNES.length)return;var moisStr=MOIS_SELECTIONNES.map(function(i){return TOUS_MOIS()[i];}).join(', ');journaliser('PAIEMENT VALIDÉ',m.nom+' – '+moisStr+' – '+fmt(MOIS_SELECTIONNES.length*m.montant));var now=new Date();MOIS_SELECTIONNES.forEach(function(idx){
