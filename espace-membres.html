@@ -539,7 +539,7 @@ function tentativeConnexionMembre() {
     MEMBRE_CONNECTE = membre;
     MODE_DECOUVERTE = false;
 
-    var rememberMe = document.getElementById('remember-me') && document.getElementById('remember-me').checked;
+    var rememberMe = (localStorage.getItem('membre_remember_pref') === '1') || (document.getElementById('remember-me') && document.getElementById('remember-me').checked);
     var sessionData = JSON.stringify({
       id: membre.id,
       expire: rememberMe ? (Date.now() + 30*24*60*60*1000) : null // 30 jours ou session uniquement
