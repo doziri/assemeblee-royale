@@ -950,7 +950,7 @@ function ouvrirFormulaire(id){
   VUE_ACTUELLE='formulaire';
   afficherVue();
 }
-function vueFormulaire(){var edit=MEMBRE_EDIT_ID?MEMBRES.find(function(x){return x.id===MEMBRE_EDIT_ID;}):null;var montantBtns=MONTANTS.map(function(m){return'<button class="montant-btn'+(m===FORM_MONTANT?' selected':'')+'" onclick="selectMontant('+m+')">'+fmt(m)+'</button>';}).join('');return['<div class="form-card">','<div style="color:var(--vert);font-weight:900;font-size:16px;margin-bottom:18px">'+(edit?'&#x270F; Modifier le membre':'&#x2795; Nouveau membre')+'</div>','<div class="field"><label>Nom complet *</label><input id="f-nom" type="text" value="'+(edit?edit.nom:'')+'" placeholder="Ex: Marie Kouassi" autofocus/></div>','<div class="field"><label>Montant mensuel *</label><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="montant-grid">'+montantBtns+'</div>'+'<div style="display:flex;align-items:center;gap:8px;margin-top:10px">'+'<span style="font-size:11px;color:var(--grisC);white-space:nowrap">Montant libre :</span>'+'<input id="montant-libre" type="number" min="100" step="100" placeholder="Ex: 7000" style="width:110px;background:#111d2a;border:1px solid #1a3a5a;border-radius:8px;padding:6px 10px;color:var(--blanc);font-size:13px;font-family:inherit;outline:none" oninput="selectMontantLibre(this.value)" value="'+(edit&&!MONTANTS.includes(edit.montant)?edit.montant:'')+'"/>'+'<span style="font-size:12px;color:var(--grisC)">F/mois</span>'+'</div>'+'<div style="color:var(--grisC);font-size:11px;margin-top:6px">Soit <span id="total-36" style="color:var(--bleu);font-weight:700">'+fmt(FORM_MONTANT*NB_MOIS())+'</span> sur '+NB_MOIS()+' mois</div></div>','<div class="field"><label>Téléphone <span style=\"font-size:10px;color:var(--grisC);font-weight:400\">(optionnel — recommandé)</span></label><input id="f-tel" type="tel" value="'+(edit?edit.tel:'')+'" placeholder="+225 07 12 34 56"/></div>',!edit?['<div class="field"><label>Mois déjà payés</label><div style="display:flex;align-items:center;gap:12px"><input type="range" min="0" max="'+(MOIS_COURANT()+1)+'" value="'+FORM_MOIS_DEBUT+'" oninput="updateMoisDebut(this.value)" style="flex:1"/><div style="color:var(--vert);font-weight:700;min-width:60px;text-align:right" id="mois-debut-label">'+(FORM_MOIS_DEBUT===0?'Aucun':FORM_MOIS_DEBUT+' mois')+'</div></div><div style="color:var(--grisC);font-size:11px;margin-top:4px" id="mois-debut-desc">'+(FORM_MOIS_DEBUT>0?'Payé jusqu\'à '+(TOUS_MOIS()[FORM_MOIS_DEBUT-1]||''):'Nouveau membre')+'</div></div>'].join(''):'','<div id="f-erreur" style="display:none;background:var(--rougeD);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:8px 12px;color:var(--rouge);font-size:12px;margin-bottom:12px"></div>','<div style="display:flex;gap:10px"><button class="btn btn-primary" style="flex:1;padding:13px" onclick="soumettreFormulaire()">'+(edit?'&#x1F4BE; Enregistrer':'&#x2705; Ajouter le membre')+'</button><button class="btn btn-ghost" onclick="changerVue(\'membres\')">Annuler</button></div>','</div>'].join('');}
+function vueFormulaire(){var edit=MEMBRE_EDIT_ID?MEMBRES.find(function(x){return x.id===MEMBRE_EDIT_ID;}):null;var montantBtns=MONTANTS.map(function(m){return'<button class="montant-btn'+(m===FORM_MONTANT?' selected':'')+'" onclick="selectMontant('+m+')">'+fmt(m)+'</button>';}).join('');return['<div class="form-card">','<div style="color:var(--vert);font-weight:900;font-size:16px;margin-bottom:18px">'+(edit?'&#x270F; Modifier le membre':'&#x2795; Nouveau membre')+'</div>','<div class="field"><label>Nom complet *</label><input id="f-nom" type="text" value="'+(edit?edit.nom:'')+'" placeholder="Ex: Marie Kouassi" autofocus/></div>','<div class="field"><label>Montant mensuel *</label><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="montant-grid">'+montantBtns+'</div>'+'<div style="display:flex;align-items:center;gap:8px;margin-top:10px">'+'<span style="font-size:11px;color:var(--grisC);white-space:nowrap">Montant libre :</span>'+'<input id="montant-libre" type="number" min="100" step="100" placeholder="Ex: 7000" style="width:110px;background:#111d2a;border:1px solid #1a3a5a;border-radius:8px;padding:6px 10px;color:var(--blanc);font-size:13px;font-family:inherit;outline:none" oninput="selectMontantLibre(this.value)" value="'+(edit&&!MONTANTS.includes(edit.montant)?edit.montant:'')+'"/>'+'<span style="font-size:12px;color:var(--grisC)">F/mois</span>'+'</div>'+'<div style="color:var(--grisC);font-size:11px;margin-top:6px">Soit <span id="total-36" style="color:var(--bleu);font-weight:700">'+fmt(FORM_MONTANT*NB_MOIS())+'</span> sur '+NB_MOIS()+' mois</div></div>','<div class="field"><label>Téléphone <span style=\"font-size:10px;color:var(--grisC);font-weight:400\">(optionnel — recommandé)</span></label><input id="f-tel" type="tel" value="'+(edit?edit.tel:'')+'" placeholder="+225 07 12 34 56"/></div>','<div class=\\"field\\"><label>Fonction <span style=\\"font-size:10px;color:var(--grisC);font-weight:400\\">(optionnel)</span></label><input id="f-fonction" type="text" value="'+(edit&&edit.fonction?edit.fonction:'')+'" placeholder="Ex: Pasteur, Trésorier, Diacre..."/></div>','<div class=\\"field\\"><label>Département <span style=\\"font-size:10px;color:var(--grisC);font-weight:400\\">(optionnel)</span></label><input id="f-departement" type="text" value="'+(edit&&edit.departement?edit.departement:'')+'" placeholder="Ex: Louange, Jeunesse, Administration..."/></div>',!edit?['<div class="field"><label>Mois déjà payés</label><div style="display:flex;align-items:center;gap:12px"><input type="range" min="0" max="'+(MOIS_COURANT()+1)+'" value="'+FORM_MOIS_DEBUT+'" oninput="updateMoisDebut(this.value)" style="flex:1"/><div style="color:var(--vert);font-weight:700;min-width:60px;text-align:right" id="mois-debut-label">'+(FORM_MOIS_DEBUT===0?'Aucun':FORM_MOIS_DEBUT+' mois')+'</div></div><div style="color:var(--grisC);font-size:11px;margin-top:4px" id="mois-debut-desc">'+(FORM_MOIS_DEBUT>0?'Payé jusqu\'à '+(TOUS_MOIS()[FORM_MOIS_DEBUT-1]||''):'Nouveau membre')+'</div></div>'].join(''):'','<div id="f-erreur" style="display:none;background:var(--rougeD);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:8px 12px;color:var(--rouge);font-size:12px;margin-bottom:12px"></div>','<div style="display:flex;gap:10px"><button class="btn btn-primary" style="flex:1;padding:13px" onclick="soumettreFormulaire()">'+(edit?'&#x1F4BE; Enregistrer':'&#x2705; Ajouter le membre')+'</button><button class="btn btn-ghost" onclick="changerVue(\'membres\')">Annuler</button></div>','</div>'].join('');}
 function selectMontantLibre(val) {
   var v = parseInt(val);
   if (!v || v < 100) return;
@@ -1718,74 +1718,69 @@ function _genQRFallback(el,qrText,size,cacheKey,memberId){
 function genererQRCodes(){if(!window.QRCode){setTimeout(genererQRCodes,500);return;}MEMBRES.forEach(function(m){genQR(m);});}
 function genCarteHTML(m){
   var MC=MOIS_COURANT();
-  var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
+  var strip={
+    ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',
+    retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',
+    inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'
+  };
   var s=statutMembre(m);
   var logoHTML=LOGO_DATA
     ?'<img src="'+LOGO_DATA+'" style="width:38px;height:38px;border-radius:6px;object-fit:cover;flex-shrink:0"/>'
-    :'<div style="width:38px;height:38px;border-radius:6px;background:#1a3a5a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:19px;">&#x26EA;</div>';
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2';
-
-  // Calendrier 3 colonnes
+    :'<div style="width:38px;height:38px;border-radius:6px;background:#eaf0fb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:19px;">&#x26EA;</div>';
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2&color=0a1628&bgcolor=ffffff';
   var tousMois=TOUS_MOIS();
   var calRows='';
   for(var i=0;i<CFG.nb_mois;i+=3){
     calRows+='<tr>';
     for(var j=i;j<Math.min(i+3,CFG.nb_mois);j++){
       var paye=(m.paiements[j]&&m.paiements[j]!==0)?'&#x2713;':'';
-      var bg=(m.paiements[j]&&m.paiements[j]!==0)?'#0d5c3a':'#ffffff';
-      var color=(m.paiements[j]&&m.paiements[j]!==0)?'#4eff9b':'#000000';
-      calRows+='<td style="border:1px solid #334455;padding:2px 5px;font-size:8px;color:#556677;white-space:nowrap;width:33%;">'
-        +'<span style="display:inline-block;width:12px;height:12px;border:1px solid #556677;background:'+bg+';vertical-align:middle;border-radius:2px;text-align:center;line-height:12px;font-size:10px;color:'+color+';">'+paye+'</span>'
-        +' '+tousMois[j]
-      +'</td>';
+      var bgC=(m.paiements[j]&&m.paiements[j]!==0)?'#0d5c3a':'#ffffff';
+      var fgC=(m.paiements[j]&&m.paiements[j]!==0)?'#ffffff':'#555555';
+      calRows+='<td style="border:1px solid #cccccc;padding:2px 5px;font-size:8px;color:#555555;white-space:nowrap;width:33%;">'
+        +'<span style="display:inline-block;width:12px;height:12px;border:1px solid #999;background:'+bgC+';vertical-align:middle;border-radius:2px;text-align:center;line-height:12px;font-size:10px;color:'+fgC+';">'+paye+'</span>'
+        +' '+tousMois[j]+'</td>';
     }
-    for(var k=CFG.nb_mois%3;k>0&&k<3&&i+3>CFG.nb_mois;k++){
-      calRows+='<td style="border:1px solid #334455;"></td>';
-    }
+    for(var k=CFG.nb_mois%3;k>0&&k<3&&i+3>CFG.nb_mois;k++)
+      calRows+='<td style="border:1px solid #cccccc;"></td>';
     calRows+='</tr>';
   }
-
+  var badgeFn=m.fonction
+    ?'<span style="display:inline-block;background:#e8f0fe;border:1px solid #1565C0;color:#1565C0;border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700;margin-right:4px;">'+m.fonction+'</span>'
+    :'';
+  var badgeDept=m.departement
+    ?'<span style="display:inline-block;background:#fff8e1;border:1px solid #b8860b;color:#b8860b;border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700;">'+m.departement+'</span>'
+    :'';
   return [
-    '<div style="width:190mm;background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;">',
-      '<div style="height:5px;background:'+strip[s]+'"></div>',
-      '<div style="padding:10px 14px;">',
-
-        // HEADER
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;">',
-          '<div style="flex:1;min-width:0;">',
-            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">',
-              logoHTML,
-              '<div>',
-                '<div style="font-size:8px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">'+CFG.nom_eglise+'</div>',
-                '<div style="font-size:7px;color:#556677;">'+CFG.nom_projet+'</div>',
-              '</div>',
+    '<div style="width:190mm;background:#ffffff;border:1.5px solid #cccccc;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;">',
+    '<div style="height:6px;background:'+strip[s]+';"></div>',
+    '<div style="padding:10px 14px;">',
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;">',
+        '<div style="flex:1;min-width:0;">',
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">',
+            logoHTML,
+            '<div>',
+              '<div style="font-size:8px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">'+CFG.nom_eglise+'</div>',
+              '<div style="font-size:7px;color:#999;">'+CFG.nom_projet+'</div>',
             '</div>',
-            '<div style="font-weight:900;font-size:17px;color:#ddeeff;line-height:1.2;margin-bottom:3px;">'+m.nom+'</div>',
-            '<div style="font-size:12px;color:#64d4ff;font-weight:700;font-family:monospace;">'+m.id+'</div>',
-            '<div style="font-size:10px;color:#8899aa;margin-top:4px;">Cotisation : <b style="color:#ffb347;">'+fmt(m.montant)+' F/mois</b></div>',
-            m.tel?'<div style="font-size:9px;color:#556677;margin-top:2px;">'+m.tel+'</div>':'',
-            (m.fonction?'<div style="font-size:9px;color:#64d4ff;margin-top:3px;font-weight:700;">'+m.fonction+'</div>':''),
-            (m.departement?'<div style="font-size:8px;color:#ffb347;margin-top:1px;">'+m.departement+'</div>':''),
           '</div>',
-          '<div style="background:white;padding:4px;border-radius:6px;flex-shrink:0;">',
-            '<img src="'+qrUrl+'" width="120" height="120" style="display:block;" alt="QR '+m.id+'"/>',
-          '</div>',
+          '<div style="font-weight:900;font-size:17px;color:#0a1628;line-height:1.2;margin-bottom:3px;">'+m.nom+'</div>',
+          '<div style="font-size:12px;color:#1565C0;font-weight:700;font-family:monospace;">'+m.id+'</div>',
+          '<div style="font-size:10px;color:#555;margin-top:3px;">Cotisation : <b style="color:#b8860b;">'+fmt(m.montant)+' F/mois</b></div>',
+          (m.tel?'<div style="font-size:9px;color:#777;margin-top:2px;">'+m.tel+'</div>':''),
+          ((badgeFn||badgeDept)?'<div style="margin-top:4px;">'+badgeFn+badgeDept+'</div>':''),
         '</div>',
-
-        // CALENDRIER
-        '<div style="border-top:1px solid #1a3a5a;padding-top:6px;">',
-          '<div style="font-size:8px;color:#8899aa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Calendrier des cotisations</div>',
-          '<table style="width:100%;border-collapse:collapse;">',
-            calRows,
-          '</table>',
+        '<div style="background:#f5f5f5;padding:4px;border-radius:6px;border:1px solid #ddd;flex-shrink:0;">',
+          '<img src="'+qrUrl+'" width="120" height="120" style="display:block;" alt="QR '+m.id+'"/>',
         '</div>',
-
-        // FOOTER
-        '<div style="font-size:7px;color:#334455;border-top:1px solid #1a3a5a;padding-top:4px;margin-top:6px;">',
-          'Valide pour la période '+TOUS_MOIS()[0]+' – '+TOUS_MOIS()[CFG.nb_mois-1],
-        '</div>',
-
       '</div>',
+      '<div style="border-top:1px solid #ddd;padding-top:6px;">',
+        '<div style="font-size:8px;color:#666;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Calendrier des cotisations</div>',
+        '<table style="width:100%;border-collapse:collapse;">'+calRows+'</table>',
+      '</div>',
+      '<div style="font-size:7px;color:#aaa;border-top:1px solid #eee;padding-top:4px;margin-top:6px;">',
+        'Valide pour la période '+TOUS_MOIS()[0]+' – '+TOUS_MOIS()[CFG.nb_mois-1],
+      '</div>',
+    '</div>',
     '</div>'
   ].join('');
 }
