@@ -2021,7 +2021,7 @@ function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun mem
 function imprimerCartes(liste){
   var zone=document.getElementById('print-zone');
 
-  // Coins de découpe : traits en L aux 4 coins de chaque carte
+  // Traits en L aux 4 coins
   function coinsDecoupe(){
     var sz='9mm', ep='0.5px', col='#888888', off='4mm';
     function coin(vt, vl, rot){
@@ -2041,27 +2041,23 @@ function imprimerCartes(liste){
     '@media print{',
     '  @page{size:A4 portrait;margin:16mm;}',
     '  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
-    '  .grille-cartes{display:flex;flex-direction:column;align-items:center;gap:12mm;}',
+    '  .grille-cartes{display:flex;flex-direction:column;align-items:center;gap:16mm;}',
     '  .carte-wrap{position:relative;page-break-inside:avoid;}',
     '}',
-    '.grille-cartes{display:flex;flex-direction:column;align-items:center;gap:12mm;padding:8mm;}',
-    '.carte-wrap{position:relative;}',
-    '.ligne-coupe{',
-    '  width:160mm;text-align:center;font-size:9px;color:#999;letter-spacing:3px;',
-    '  padding:4px 0;border-top:1px dashed #bbbbbb;margin-top:6mm;',
+    '.grille-cartes{display:flex;flex-direction:column;align-items:center;gap:16mm;padding:8mm;}',
+    '.carte-wrap{',
+    '  position:relative;',
+    '  outline:1.5px dashed #bbbbbb;',
+    '  outline-offset:3mm;',
     '}',
     '</style>'
   ].join('');
 
-  var cartesHTML=liste.map(function(m, idx){
-    var wrap='<div class="carte-wrap">'
+  var cartesHTML=liste.map(function(m){
+    return '<div class="carte-wrap">'
       +coinsDecoupe()
       +genCarteHTML(m)
       +'</div>';
-    if(idx < liste.length-1){
-      wrap+='<div class="ligne-coupe">&#x2702;&nbsp;&nbsp;&nbsp;COUPER ICI&nbsp;&nbsp;&nbsp;&#x2702;</div>';
-    }
-    return wrap;
   }).join('');
 
   zone.innerHTML=style+'<div class="grille-cartes">'+cartesHTML+'</div>';
