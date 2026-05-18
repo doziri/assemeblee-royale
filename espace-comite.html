@@ -1725,9 +1725,9 @@ function genCarteHTML(m){
   };
   var s=statutMembre(m);
   var logoHTML=LOGO_DATA
-    ?'<img src="'+LOGO_DATA+'" style="width:38px;height:38px;border-radius:6px;object-fit:cover;flex-shrink:0"/>'
-    :'<div style="width:38px;height:38px;border-radius:6px;background:#eaf0fb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:19px;">&#x26EA;</div>';
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2&color=0a1628&bgcolor=ffffff';
+    ?'<img src="'+LOGO_DATA+'" style="width:30px;height:30px;border-radius:5px;object-fit:cover;flex-shrink:0"/>'
+    :'<div style="width:30px;height:30px;border-radius:5px;background:#eaf0fb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;">&#x26EA;</div>';
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=95x95&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2&color=0a1628&bgcolor=ffffff';
   var tousMois=TOUS_MOIS();
   var calRows='';
   for(var i=0;i<CFG.nb_mois;i+=3){
@@ -1736,8 +1736,8 @@ function genCarteHTML(m){
       var paye=(m.paiements[j]&&m.paiements[j]!==0)?'&#x2713;':'';
       var bgC=(m.paiements[j]&&m.paiements[j]!==0)?'#0d5c3a':'#ffffff';
       var fgC=(m.paiements[j]&&m.paiements[j]!==0)?'#ffffff':'#555555';
-      calRows+='<td style="border:1px solid #cccccc;padding:2px 5px;font-size:8px;color:#555555;white-space:nowrap;width:33%;">'
-        +'<span style="display:inline-block;width:12px;height:12px;border:1px solid #999;background:'+bgC+';vertical-align:middle;border-radius:2px;text-align:center;line-height:12px;font-size:10px;color:'+fgC+';">'+paye+'</span>'
+      calRows+='<td style="border:1px solid #cccccc;padding:1px 4px;font-size:7px;color:#555555;white-space:nowrap;width:33%;">'
+        +'<span style="display:inline-block;width:10px;height:10px;border:1px solid #999;background:'+bgC+';vertical-align:middle;border-radius:2px;text-align:center;line-height:10px;font-size:8px;color:'+fgC+';">'+paye+'</span>'
         +' '+tousMois[j]+'</td>';
     }
     for(var k=CFG.nb_mois%3;k>0&&k<3&&i+3>CFG.nb_mois;k++)
@@ -1745,40 +1745,40 @@ function genCarteHTML(m){
     calRows+='</tr>';
   }
   var badgeFn=m.fonction
-    ?'<span style="display:inline-block;background:#e8f0fe;border:1px solid #1565C0;color:#1565C0;border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700;margin-right:4px;">'+m.fonction+'</span>'
+    ?'<span style="display:inline-block;background:#e8f0fe;border:1px solid #1565C0;color:#1565C0;border-radius:3px;padding:1px 6px;font-size:8px;font-weight:700;margin-right:3px;">'+m.fonction+'</span>'
     :'';
   var badgeDept=m.departement
-    ?'<span style="display:inline-block;background:#fff8e1;border:1px solid #b8860b;color:#b8860b;border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700;">'+m.departement+'</span>'
+    ?'<span style="display:inline-block;background:#fff8e1;border:1px solid #b8860b;color:#b8860b;border-radius:3px;padding:1px 6px;font-size:8px;font-weight:700;">'+m.departement+'</span>'
     :'';
   return [
-    '<div style="width:190mm;background:#ffffff;border:1.5px solid #cccccc;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;">',
-    '<div style="height:6px;background:'+strip[s]+';"></div>',
-    '<div style="padding:10px 14px;">',
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;">',
+    '<div style="width:160mm;background:#ffffff;border:1.5px solid #cccccc;border-radius:6px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;">',
+    '<div style="height:5px;background:'+strip[s]+';"></div>',
+    '<div style="padding:8px 10px;">',
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">',
         '<div style="flex:1;min-width:0;">',
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">',
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">',
             logoHTML,
             '<div>',
-              '<div style="font-size:8px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">'+CFG.nom_eglise+'</div>',
-              '<div style="font-size:7px;color:#999;">'+CFG.nom_projet+'</div>',
+              '<div style="font-size:7px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">'+CFG.nom_eglise+'</div>',
+              '<div style="font-size:6px;color:#999;">'+CFG.nom_projet+'</div>',
             '</div>',
           '</div>',
-          '<div style="font-weight:900;font-size:17px;color:#0a1628;line-height:1.2;margin-bottom:3px;">'+m.nom+'</div>',
-          '<div style="font-size:12px;color:#1565C0;font-weight:700;font-family:monospace;">'+m.id+'</div>',
-          '<div style="font-size:10px;color:#555;margin-top:3px;">Cotisation : <b style="color:#b8860b;">'+fmt(m.montant)+' F/mois</b></div>',
-          (m.tel?'<div style="font-size:9px;color:#777;margin-top:2px;">'+m.tel+'</div>':''),
-          ((badgeFn||badgeDept)?'<div style="margin-top:4px;">'+badgeFn+badgeDept+'</div>':''),
+          '<div style="font-weight:900;font-size:14px;color:#0a1628;line-height:1.2;margin-bottom:2px;">'+m.nom+'</div>',
+          '<div style="font-size:10px;color:#1565C0;font-weight:700;font-family:monospace;">'+m.id+'</div>',
+          '<div style="font-size:9px;color:#555;margin-top:2px;">Cotisation : <b style="color:#b8860b;">'+fmt(m.montant)+' F/mois</b></div>',
+          (m.tel?'<div style="font-size:8px;color:#777;margin-top:1px;">'+m.tel+'</div>':''),
+          ((badgeFn||badgeDept)?'<div style="margin-top:3px;">'+badgeFn+badgeDept+'</div>':''),
         '</div>',
-        '<div style="background:#f5f5f5;padding:4px;border-radius:6px;border:1px solid #ddd;flex-shrink:0;">',
-          '<img src="'+qrUrl+'" width="120" height="120" style="display:block;" alt="QR '+m.id+'"/>',
+        '<div style="background:#f5f5f5;padding:3px;border-radius:5px;border:1px solid #ddd;flex-shrink:0;">',
+          '<img src="'+qrUrl+'" width="95" height="95" style="display:block;" alt="QR '+m.id+'"/>',
         '</div>',
       '</div>',
-      '<div style="border-top:1px solid #ddd;padding-top:6px;">',
-        '<div style="font-size:8px;color:#666;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Calendrier des cotisations</div>',
+      '<div style="border-top:1px solid #ddd;padding-top:5px;">',
+        '<div style="font-size:7px;color:#666;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Calendrier des cotisations</div>',
         '<table style="width:100%;border-collapse:collapse;">'+calRows+'</table>',
       '</div>',
-      '<div style="font-size:7px;color:#aaa;border-top:1px solid #eee;padding-top:4px;margin-top:6px;">',
-        'Valide pour la période '+TOUS_MOIS()[0]+' – '+TOUS_MOIS()[CFG.nb_mois-1],
+      '<div style="font-size:6px;color:#aaa;border-top:1px solid #eee;padding-top:3px;margin-top:4px;">',
+        'Valide : '+TOUS_MOIS()[0]+' – '+TOUS_MOIS()[CFG.nb_mois-1],
       '</div>',
     '</div>',
     '</div>'
@@ -2023,16 +2023,17 @@ function imprimerCartes(liste){
   var style=[
     '<style>',
     '@media print{',
-    '  @page{size:A4 portrait;margin:8mm;}',
+    '  @page{size:A4 portrait;margin:10mm;}',
     '  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
-    '  .grille-cartes{display:flex;flex-direction:column;align-items:center;gap:6mm;}',
+    '  .grille-cartes{display:flex;flex-direction:column;align-items:center;gap:8mm;}',
     '  .carte-wrap{page-break-inside:avoid;}',
-    '  .carte-wrap:nth-child(2n+1):not(:last-child){page-break-after:avoid;}',
     '}',
-    '.grille-cartes{display:flex;flex-direction:column;align-items:center;gap:6mm;padding:4mm;}',
+    '.grille-cartes{display:flex;flex-direction:column;align-items:center;gap:8mm;padding:5mm;}',
     '</style>'
   ].join('');
-  zone.innerHTML=style+'<div class="grille-cartes">'+liste.map(function(m){return '<div class="carte-wrap">'+genCarteHTML(m)+'</div>';}).join('')+'</div>';
+  zone.innerHTML=style+'<div class="grille-cartes">'+liste.map(function(m){
+    return '<div class="carte-wrap">'+genCarteHTML(m)+'</div>';
+  }).join('')+'</div>';
   setTimeout(function(){window.print();}, 1500);
 }
 
