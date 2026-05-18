@@ -1718,16 +1718,12 @@ function _genQRFallback(el,qrText,size,cacheKey,memberId){
 function genererQRCodes(){if(!window.QRCode){setTimeout(genererQRCodes,500);return;}MEMBRES.forEach(function(m){genQR(m);});}
 function genCarteHTML(m){
   var MC=MOIS_COURANT();
-  var strip={
-    ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',
-    retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',
-    inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'
-  };
+  var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
   var s=statutMembre(m);
   var logoHTML=LOGO_DATA
-    ?'<img src="'+LOGO_DATA+'" style="width:30px;height:30px;border-radius:5px;object-fit:cover;flex-shrink:0"/>'
-    :'<div style="width:30px;height:30px;border-radius:5px;background:#eaf0fb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;">&#x26EA;</div>';
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=95x95&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2&color=0a1628&bgcolor=ffffff';
+    ?'<img src="'+LOGO_DATA+'" style="width:26px;height:26px;border-radius:4px;object-fit:cover;flex-shrink:0"/>'
+    :'<div style="width:26px;height:26px;border-radius:4px;background:#eaf0fb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;">&#x26EA;</div>';
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=1&color=0a1628&bgcolor=ffffff';
   var tousMois=TOUS_MOIS();
   var calRows='';
   for(var i=0;i<CFG.nb_mois;i+=3){
@@ -1736,48 +1732,44 @@ function genCarteHTML(m){
       var paye=(m.paiements[j]&&m.paiements[j]!==0)?'&#x2713;':'';
       var bgC=(m.paiements[j]&&m.paiements[j]!==0)?'#0d5c3a':'#ffffff';
       var fgC=(m.paiements[j]&&m.paiements[j]!==0)?'#ffffff':'#555555';
-      calRows+='<td style="border:1px solid #cccccc;padding:1px 4px;font-size:7px;color:#555555;white-space:nowrap;width:33%;">'
-        +'<span style="display:inline-block;width:10px;height:10px;border:1px solid #999;background:'+bgC+';vertical-align:middle;border-radius:2px;text-align:center;line-height:10px;font-size:8px;color:'+fgC+';">'+paye+'</span>'
+      calRows+='<td style="border:1px solid #cccccc;padding:1px 3px;font-size:6.5px;color:#555;white-space:nowrap;width:33%;">'
+        +'<span style="display:inline-block;width:9px;height:9px;border:1px solid #999;background:'+bgC+';vertical-align:middle;border-radius:2px;text-align:center;line-height:9px;font-size:8px;color:'+fgC+';">'+paye+'</span>'
         +' '+tousMois[j]+'</td>';
     }
     for(var k=CFG.nb_mois%3;k>0&&k<3&&i+3>CFG.nb_mois;k++)
       calRows+='<td style="border:1px solid #cccccc;"></td>';
     calRows+='</tr>';
   }
-  var badgeFn=m.fonction
-    ?'<span style="display:inline-block;background:#e8f0fe;border:1px solid #1565C0;color:#1565C0;border-radius:3px;padding:1px 6px;font-size:8px;font-weight:700;margin-right:3px;">'+m.fonction+'</span>'
-    :'';
-  var badgeDept=m.departement
-    ?'<span style="display:inline-block;background:#fff8e1;border:1px solid #b8860b;color:#b8860b;border-radius:3px;padding:1px 6px;font-size:8px;font-weight:700;">'+m.departement+'</span>'
-    :'';
+  var badgeFn=m.fonction?'<span style="display:inline-block;background:#e8f0fe;border:1px solid #1565C0;color:#1565C0;border-radius:3px;padding:1px 5px;font-size:7px;font-weight:700;margin-right:3px;">'+m.fonction+'</span>':'';
+  var badgeDept=m.departement?'<span style="display:inline-block;background:#fff8e1;border:1px solid #b8860b;color:#b8860b;border-radius:3px;padding:1px 5px;font-size:7px;font-weight:700;">'+m.departement+'</span>':'';
   return [
-    '<div style="width:160mm;background:#ffffff;border:1.5px solid #cccccc;border-radius:6px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;">',
-    '<div style="height:5px;background:'+strip[s]+';"></div>',
-    '<div style="padding:8px 10px;">',
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">',
+    '<div style="width:160mm;background:#ffffff;border:1.5px solid #cccccc;border-radius:5px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;">',
+    '<div style="height:4px;background:'+strip[s]+';"></div>',
+    '<div style="padding:6px 9px;">',
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:7px;margin-bottom:6px;">',
         '<div style="flex:1;min-width:0;">',
-          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">',
+          '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">',
             logoHTML,
             '<div>',
-              '<div style="font-size:7px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">'+CFG.nom_eglise+'</div>',
+              '<div style="font-size:6.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">'+CFG.nom_eglise+'</div>',
               '<div style="font-size:6px;color:#999;">'+CFG.nom_projet+'</div>',
             '</div>',
           '</div>',
-          '<div style="font-weight:900;font-size:14px;color:#0a1628;line-height:1.2;margin-bottom:2px;">'+m.nom+'</div>',
-          '<div style="font-size:10px;color:#1565C0;font-weight:700;font-family:monospace;">'+m.id+'</div>',
-          '<div style="font-size:9px;color:#555;margin-top:2px;">Cotisation : <b style="color:#b8860b;">'+fmt(m.montant)+' F/mois</b></div>',
-          (m.tel?'<div style="font-size:8px;color:#777;margin-top:1px;">'+m.tel+'</div>':''),
-          ((badgeFn||badgeDept)?'<div style="margin-top:3px;">'+badgeFn+badgeDept+'</div>':''),
+          '<div style="font-weight:900;font-size:13px;color:#0a1628;line-height:1.2;margin-bottom:2px;">'+m.nom+'</div>',
+          '<div style="font-size:9px;color:#1565C0;font-weight:700;font-family:monospace;">'+m.id+'</div>',
+          '<div style="font-size:8px;color:#555;margin-top:2px;">Cotisation : <b style="color:#b8860b;">'+fmt(m.montant)+' F/mois</b></div>',
+          (m.tel?'<div style="font-size:7.5px;color:#777;margin-top:1px;">'+m.tel+'</div>':''),
+          ((badgeFn||badgeDept)?'<div style="margin-top:2px;">'+badgeFn+badgeDept+'</div>':''),
         '</div>',
-        '<div style="background:#f5f5f5;padding:3px;border-radius:5px;border:1px solid #ddd;flex-shrink:0;">',
-          '<img src="'+qrUrl+'" width="95" height="95" style="display:block;" alt="QR '+m.id+'"/>',
+        '<div style="background:#f5f5f5;padding:3px;border-radius:4px;border:1px solid #ddd;flex-shrink:0;">',
+          '<img src="'+qrUrl+'" width="80" height="80" style="display:block;" alt="QR '+m.id+'"/>',
         '</div>',
       '</div>',
-      '<div style="border-top:1px solid #ddd;padding-top:5px;">',
-        '<div style="font-size:7px;color:#666;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Calendrier des cotisations</div>',
+      '<div style="border-top:1px solid #ddd;padding-top:4px;">',
+        '<div style="font-size:6.5px;color:#666;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Calendrier des cotisations</div>',
         '<table style="width:100%;border-collapse:collapse;">'+calRows+'</table>',
       '</div>',
-      '<div style="font-size:6px;color:#aaa;border-top:1px solid #eee;padding-top:3px;margin-top:4px;">',
+      '<div style="font-size:6px;color:#aaa;border-top:1px solid #eee;padding-top:2px;margin-top:3px;">',
         'Valide : '+TOUS_MOIS()[0]+' – '+TOUS_MOIS()[CFG.nb_mois-1],
       '</div>',
     '</div>',
@@ -2021,10 +2013,9 @@ function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun mem
 function imprimerCartes(liste){
   var zone=document.getElementById('print-zone');
 
-  // Traits en L aux 4 coins
   function coinsDecoupe(){
-    var sz='9mm', ep='0.5px', col='#888888', off='4mm';
-    function coin(vt, vl, rot){
+    var sz='7mm', ep='0.5px', col='#888', off='2.5mm';
+    function coin(vt,vl,rot){
       return '<div style="position:absolute;'+vt+';'+vl+';width:'+sz+';height:'+sz+';transform:rotate('+rot+'deg);pointer-events:none;">'
         +'<div style="position:absolute;top:0;left:0;width:'+ep+';height:'+sz+';background:'+col+';"></div>'
         +'<div style="position:absolute;top:0;left:0;width:'+sz+';height:'+ep+';background:'+col+';"></div>'
@@ -2039,28 +2030,49 @@ function imprimerCartes(liste){
   var style=[
     '<style>',
     '@media print{',
-    '  @page{size:A4 portrait;margin:16mm;}',
+    '  @page{size:A4 portrait;margin:8mm;}',
     '  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
-    '  .grille-cartes{display:flex;flex-direction:column;align-items:center;gap:16mm;}',
+    '  .page-cartes{',
+    '    display:flex;',
+    '    flex-direction:column;',
+    '    align-items:center;',
+    '    gap:8mm;',
+    '    height:281mm;',       /* 297 - 2x8mm marges */
+    '    page-break-after:always;',
+    '    page-break-inside:avoid;',
+    '    box-sizing:border-box;',
+    '    justify-content:flex-start;',
+    '    padding-top:2mm;',
+    '  }',
+    '  .page-cartes:last-child{page-break-after:auto;}',
     '  .carte-wrap{position:relative;page-break-inside:avoid;}',
     '}',
-    '.grille-cartes{display:flex;flex-direction:column;align-items:center;gap:16mm;padding:8mm;}',
+    '.page-cartes{',
+    '  display:flex;flex-direction:column;align-items:center;',
+    '  gap:8mm;padding:5mm;',
+    '}',
     '.carte-wrap{',
     '  position:relative;',
-    '  outline:1.5px dashed #bbbbbb;',
-    '  outline-offset:3mm;',
+    '  outline:1px dashed #bbbbbb;',
+    '  outline-offset:2mm;',
     '}',
     '</style>'
   ].join('');
 
-  var cartesHTML=liste.map(function(m){
-    return '<div class="carte-wrap">'
-      +coinsDecoupe()
-      +genCarteHTML(m)
-      +'</div>';
+  // Grouper par 3 cartes par page
+  var pages = [];
+  for(var i=0; i<liste.length; i+=3){
+    pages.push(liste.slice(i, i+3));
+  }
+
+  var pagesHTML = pages.map(function(groupe){
+    var cartesHTML = groupe.map(function(m){
+      return '<div class="carte-wrap">'+coinsDecoupe()+genCarteHTML(m)+'</div>';
+    }).join('');
+    return '<div class="page-cartes">'+cartesHTML+'</div>';
   }).join('');
 
-  zone.innerHTML=style+'<div class="grille-cartes">'+cartesHTML+'</div>';
+  zone.innerHTML = style + pagesHTML;
   setTimeout(function(){window.print();}, 1500);
 }
 
