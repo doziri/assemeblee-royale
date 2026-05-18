@@ -2020,20 +2020,51 @@ function imprimerCarte(id){var m=MEMBRES.find(function(x){return x.id===id;});if
 function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun membre','danger');return;}imprimerCartes(MEMBRES);}
 function imprimerCartes(liste){
   var zone=document.getElementById('print-zone');
+
+  // Coins de découpe : traits en L aux 4 coins de chaque carte
+  function coinsDecoupe(){
+    var sz='9mm', ep='0.5px', col='#888888', off='4mm';
+    function coin(vt, vl, rot){
+      return '<div style="position:absolute;'+vt+';'+vl+';width:'+sz+';height:'+sz+';transform:rotate('+rot+'deg);pointer-events:none;">'
+        +'<div style="position:absolute;top:0;left:0;width:'+ep+';height:'+sz+';background:'+col+';"></div>'
+        +'<div style="position:absolute;top:0;left:0;width:'+sz+';height:'+ep+';background:'+col+';"></div>'
+        +'</div>';
+    }
+    return coin('top:-'+off,'left:-'+off,'0')
+          +coin('top:-'+off,'right:-'+off,'90')
+          +coin('bottom:-'+off,'right:-'+off,'180')
+          +coin('bottom:-'+off,'left:-'+off,'270');
+  }
+
   var style=[
     '<style>',
     '@media print{',
-    '  @page{size:A4 portrait;margin:10mm;}',
+    '  @page{size:A4 portrait;margin:16mm;}',
     '  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
-    '  .grille-cartes{display:flex;flex-direction:column;align-items:center;gap:8mm;}',
-    '  .carte-wrap{page-break-inside:avoid;}',
+    '  .grille-cartes{display:flex;flex-direction:column;align-items:center;gap:12mm;}',
+    '  .carte-wrap{position:relative;page-break-inside:avoid;}',
     '}',
-    '.grille-cartes{display:flex;flex-direction:column;align-items:center;gap:8mm;padding:5mm;}',
+    '.grille-cartes{display:flex;flex-direction:column;align-items:center;gap:12mm;padding:8mm;}',
+    '.carte-wrap{position:relative;}',
+    '.ligne-coupe{',
+    '  width:160mm;text-align:center;font-size:9px;color:#999;letter-spacing:3px;',
+    '  padding:4px 0;border-top:1px dashed #bbbbbb;margin-top:6mm;',
+    '}',
     '</style>'
   ].join('');
-  zone.innerHTML=style+'<div class="grille-cartes">'+liste.map(function(m){
-    return '<div class="carte-wrap">'+genCarteHTML(m)+'</div>';
-  }).join('')+'</div>';
+
+  var cartesHTML=liste.map(function(m, idx){
+    var wrap='<div class="carte-wrap">'
+      +coinsDecoupe()
+      +genCarteHTML(m)
+      +'</div>';
+    if(idx < liste.length-1){
+      wrap+='<div class="ligne-coupe">&#x2702;&nbsp;&nbsp;&nbsp;COUPER ICI&nbsp;&nbsp;&nbsp;&#x2702;</div>';
+    }
+    return wrap;
+  }).join('');
+
+  zone.innerHTML=style+'<div class="grille-cartes">'+cartesHTML+'</div>';
   setTimeout(function(){window.print();}, 1500);
 }
 
