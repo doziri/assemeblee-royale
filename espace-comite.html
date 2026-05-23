@@ -1996,199 +1996,6 @@ function genCarteHTML(m){
 // ══════════════════════════════════════════════════
 // CARTE FORMAT PVC (85.6 x 54mm — format CB)
 // ══════════════════════════════════════════════════
-function genCartePVCHTML(m){
-  var s = statutMembre(m);
-  var strip = {
-    ajour:  'linear-gradient(90deg,#0d5c3a,#4eff9b)',
-    retard: 'linear-gradient(90deg,#5c3a0d,#ffb347)',
-    inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'
-  };
-  var logoHTML = LOGO_DATA
-    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;vertical-align:middle"/>'
-    : '<span style="font-size:14px">&#x26EA;</span>';
-
-  // QR code grand format via API
-  var qrText = 'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant;
-  var qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='
-    + encodeURIComponent(qrText)+'&format=png&margin=2&color=0a1628&bgcolor=ffffff';
-
-  // Dimensions carte PVC en CSS : 85.6mm x 54mm
-  return '<div class="carte-pvc" style="'
-    +'width:85.6mm;height:54mm;'
-    +'background:linear-gradient(135deg,#0a1628,#0f2030);'
-    +'border-radius:4mm;overflow:hidden;'
-    +'font-family:Arial,sans-serif;'
-    +'display:inline-block;margin:3mm;'
-    +'page-break-inside:avoid;'
-    +'position:relative;'
-    +'box-shadow:0 2px 8px rgba(0,0,0,0.4);'
-    +'">'
-
-    // Bande colorée haut
-    +'<div style="height:4px;background:'+strip[s]+';"></div>'
-
-    // Contenu principal
-    +'<div style="display:flex;height:calc(54mm - 4px);padding:3mm;">'
-
-      // Colonne gauche : infos membre
-      +'<div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding-right:2mm;">'
-
-        // Header : logo + nom eglise
-        +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:2mm;">'
-          +logoHTML
-          +'<div style="overflow:hidden;">'
-            +'<div style="font-size:5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CFG.nom_eglise+'</div>'
-            +'<div style="font-size:4.5px;color:#556677;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CFG.nom_projet+'</div>'
-          +'</div>'
-        +'</div>'
-
-        // Nom membre
-        +'<div style="font-size:9px;font-weight:900;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44mm;">'+m.nom+'</div>'
-
-        // ID membre
-        +'<div style="font-size:8px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;letter-spacing:0.5px;margin-top:1mm;">'+m.id+'</div>'
-
-        // Cotisation + statut
-        +'<div style="display:flex;gap:3mm;margin-top:1mm;align-items:center;">'
-          +'<div style="font-size:7px;color:#ffb347;font-weight:700;">'+fmt(m.montant)+'/mois</div>'
-          +'<div style="font-size:6px;padding:1px 4px;border-radius:2px;font-weight:700;background:'+(s==='ajour'?'#0d5c3a':s==='retard'?'#5c3a0d':'#5c0d0d')+';color:'+(s==='ajour'?'#4eff9b':s==='retard'?'#ffb347':'#ff6b6b')+';white-space:nowrap;">'+(s==='ajour'?'A JOUR':s==='retard'?'RETARD':'INACTIF')+'</div>'
-        +'</div>'
-
-        // Tel si disponible
-        +(m.tel ? '<div style="font-size:6px;color:#556677;margin-top:1mm;">'+m.tel+'</div>' : '')
-
-      +'</div>'
-
-      // Colonne droite : QR code grand format
-      +'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;">'
-        +'<div style="background:#ffffff;padding:2px;border-radius:3px;">'
-          +'<img src="'+qrUrl+'" width="110" height="110" style="display:block;" alt="QR '+m.id+'"/>'
-        +'</div>'
-        +'<div style="font-size:5px;color:#8899aa;margin-top:1mm;font-family:Courier New;text-align:center;">'+m.id+'</div>'
-      +'</div>'
-
-    +'</div>'
-  +'</div>';
-}
-
-function imprimerCartesPVC(liste) {
-  // Styles d'impression optimisés carte PVC
-  var printStyles = '<style>'
-    +'@page { size: A4; margin: 10mm; }'
-    +'@media print {'
-      +' body { margin:0; padding:0; }'
-      +' .carte-pvc { '
-        +'   -webkit-print-color-adjust: exact !important;'
-        +'   print-color-adjust: exact !important;'
-        +'   color-adjust: exact !important;'
-        +' }'
-    +'}'
-    +'.pvc-grid {'
-      +'display:flex;'
-      +'flex-wrap:wrap;'
-      +'gap:5mm;'
-      +'padding:5mm;'
-      +'justify-content:flex-start;'
-    +'}'
-    +'</style>';
-
-  var cartesHTML = liste.map(function(m){ return genCartePVCHTML(m); }).join('');
-
-  var zone = document.getElementById('print-zone');
-  zone.innerHTML = printStyles
-    +'<div style="padding:5mm;text-align:center;font-family:Arial;font-size:10px;color:#333;margin-bottom:5mm;">'
-    +'<strong>CARTES FORMAT PVC — A decouper</strong><br/>'
-    +'Format standard 85.6 x 54mm — '+liste.length+' carte(s)'
-    +'</div>'
-    +'<div class="pvc-grid">'+cartesHTML+'</div>';
-
-  // Attendre chargement des QR codes
-  setTimeout(function(){ window.print(); }, 2000);
-}
-
-function imprimerCartePVC(id) {
-  var m = MEMBRES.find(function(x){ return x.id===id; });
-  if (!m) return;
-  imprimerCartesPVC([m]);
-}
-
-function imprimerToutesCartesPVC() {
-  if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
-  imprimerCartesPVC(MEMBRES);
-}
-
-
-// ══════════════════════════════════════════════════
-// CARTES FORMAT PVC (85.6 x 54mm — carte de crédit)
-// ══════════════════════════════════════════════════
-function genCartePVCHTML(m) {
-  var s = statutMembre(m);
-  var MC = MOIS_COURANT();
-  var payes = m.paiements.filter(function(p){ return p && p!==0; }).length;
-  var strip = {
-    ajour:  'linear-gradient(135deg,#0d5c3a,#4eff9b)',
-    retard: 'linear-gradient(135deg,#5c3a0d,#ffb347)',
-    inactif:'linear-gradient(135deg,#5c0d0d,#ff6b6b)'
-  };
-  var logoHTML = LOGO_DATA
-    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
-    : '<div style="width:22px;height:22px;border-radius:3px;background:#1a3a5a;flex-shrink:0"></div>';
-
-  // QR code grand format pour carte PVC
-  var qrText = 'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant;
-  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data='+encodeURIComponent(qrText)+'&format=png&margin=2&bgcolor=ffffff&color=0a1628';
-
-  // Carte PVC : 85.6mm x 54mm = 323px x 204px à 96dpi
-  return [
-    '<div style="width:323px;height:204px;background:linear-gradient(135deg,#0a1628,#0f2030);',
-    'border-radius:10px;overflow:hidden;font-family:Arial,sans-serif;',
-    'display:inline-block;margin:4mm;vertical-align:top;page-break-inside:avoid;',
-    'box-shadow:0 2px 8px rgba(0,0,0,0.4);position:relative;">',
-
-      // Bande couleur statut en haut
-      '<div style="height:4px;background:'+strip[s]+'"></div>',
-
-      '<div style="padding:8px 10px;height:calc(100% - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">',
-
-        // HEADER : logo + nom église + QR
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">',
-          '<div style="flex:1;min-width:0;">',
-            '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">',
-              logoHTML,
-              '<div style="font-size:5.5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.2;">'+
-                (CFG.nom_eglise||'ARR')+'</div>',
-            '</div>',
-            // Nom membre
-            '<div style="font-weight:900;font-size:11px;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">'+m.nom+'</div>',
-            // Code membre en monospace
-            '<div style="font-size:9px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;margin-top:2px;">'+m.id+'</div>',
-          '</div>',
-          // QR CODE GRAND FORMAT
-          '<div style="background:#ffffff;padding:3px;border-radius:5px;flex-shrink:0;">',
-            '<img src="'+qrUrl+'" width="80" height="80" style="display:block;" alt="QR"/>',
-          '</div>',
-        '</div>',
-
-        // FOOTER : cotisation + statut
-        '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #1a3a5a;padding-top:5px;">',
-          '<div>',
-            '<div style="font-size:7px;color:#556677;text-transform:uppercase;font-weight:700;">Cotisation</div>',
-            '<div style="font-size:9px;color:#64d4ff;font-weight:700;">'+fmt(m.montant)+'/mois</div>',
-          '</div>',
-          '<div style="text-align:center;">',
-            '<div style="font-size:7px;color:#556677;text-transform:uppercase;font-weight:700;">Mois payes</div>',
-            '<div style="font-size:9px;color:#4eff9b;font-weight:700;">'+payes+'/'+CFG.nb_mois+'</div>',
-          '</div>',
-          '<div>',
-            badgeHTML(s),
-          '</div>',
-        '</div>',
-
-      '</div>',
-    '</div>'
-  ].join('');
-}
-
 
 function imprimerToutesCartesPVC() {
   if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
@@ -2867,66 +2674,44 @@ function installerPWA() {
 
 
 // ══ CARTES FORMAT PVC (85.6mm x 54mm — format carte bancaire) ══
-function genCartePVCHTML(m) {
-  var s = statutMembre(m);
-  var strip = {
-    ajour:   'linear-gradient(90deg,#0d5c3a,#4eff9b)',
-    retard:  'linear-gradient(90deg,#5c3a0d,#ffb347)',
-    inactif: 'linear-gradient(90deg,#5c0d0d,#ff6b6b)'
-  };
-  var logoHTML = LOGO_DATA
-    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
-    : '<div style="width:22px;height:22px;background:#1a3a5a;border-radius:3px;flex-shrink:0"></div>';
-
-  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&data='
-    + encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)
-    + '&format=png&margin=2&color=0a1628&bgcolor=ffffff';
-
-  return [
-    '<div style="width:85.6mm;height:54mm;background:linear-gradient(135deg,#0a1628,#0f2030);',
-    'border-radius:4px;overflow:hidden;font-family:Arial,sans-serif;',
-    'display:inline-block;margin:3mm;vertical-align:top;box-sizing:border-box;',
-    'page-break-inside:avoid;position:relative;">',
-
-      // Bande colorée haut
-      '<div style="height:4px;background:'+strip[s]+'"></div>',
-
-      '<div style="padding:5px 6px 4px 6px;height:calc(54mm - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">',
-
-        // LIGNE 1: Logo + Nom église + QR code
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">',
-          '<div style="flex:1;min-width:0;padding-right:4px;">',
-            '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">',
-              logoHTML,
-              '<div style="font-size:5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.2">'+CFG.nom_eglise+'</div>',
-            '</div>',
-            // Nom membre
-            '<div style="font-weight:900;font-size:8px;color:#ddeeff;line-height:1.2;margin-bottom:2px;word-break:break-word;">'+m.nom+'</div>',
-            // Code membre
-            '<div style="font-size:8px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;letter-spacing:.5px;">'+m.id+'</div>',
-          '</div>',
-          // QR CODE GRAND FORMAT
-          '<div style="background:#ffffff;padding:3px;border-radius:4px;flex-shrink:0;">',
-            '<img src="'+qrUrl+'" width="110" height="110"',
-            ' style="display:block;border-radius:2px;" alt="QR '+m.id+'"/>',
-          '</div>',
-        '</div>',
-
-        // LIGNE 2: Cotisation + Projet
-        '<div style="border-top:1px solid #1a3a5a;padding-top:3px;display:flex;justify-content:space-between;align-items:flex-end;">',
-          '<div>',
-            '<div style="font-size:5px;color:#556677;text-transform:uppercase;font-weight:700;">Cotisation mensuelle</div>',
-            '<div style="font-size:8px;color:#ffb347;font-weight:700;">'+fmt(m.montant)+' F/mois</div>',
-          '</div>',
-          '<div style="text-align:right;">',
-            '<div style="font-size:5px;color:#556677;">'+CFG.nom_projet+'</div>',
-            m.tel ? '<div style="font-size:5.5px;color:#445566;">'+m.tel+'</div>' : '',
-          '</div>',
-        '</div>',
-
-      '</div>',
-    '</div>'
-  ].join('');
+function genCartePVCHTML(m){
+  var s=statutMembre(m);
+  var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
+  var logoHTML=LOGO_DATA
+    ?'<img src="'+LOGO_DATA+'" style="width:20px;height:20px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
+    :'<div style="width:20px;height:20px;border-radius:3px;background:#eaf0fb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;">&#x26EA;</div>';
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=75x75&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=1&color=0a1628&bgcolor=ffffff';
+  var badgeFn=m.fonction?'<span style="display:inline-block;background:#e8f0fe;border:1px solid #1565C0;color:#1565C0;border-radius:2px;padding:1px 4px;font-size:6px;font-weight:700;margin-right:2px;">'+m.fonction+'</span>':'';
+  var badgeDept=m.departement?'<span style="display:inline-block;background:#fff8e1;border:1px solid #b8860b;color:#b8860b;border-radius:2px;padding:1px 4px;font-size:6px;font-weight:700;">'+m.departement+'</span>':'';
+  return '<div style="width:85.6mm;height:54mm;background:#ffffff;border:2px solid #6366f1;border-radius:3px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;display:inline-block;vertical-align:top;">'
+    +'<div style="height:4px;background:linear-gradient(90deg,#6366f1,#818cf8);"></div>'
+    +'<div style="padding:4px 5px;height:calc(54mm - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">'
+      // HEADER
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">'
+        +'<div style="flex:1;min-width:0;">'
+          +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">'
+            +logoHTML
+            +'<div>'
+              +'<div style="font-size:5.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.1;">'+CFG.nom_eglise+'</div>'
+              +'<div style="font-size:5px;color:#999;">'+CFG.nom_projet+'</div>'
+            +'</div>'
+          +'</div>'
+          +'<div style="font-weight:900;font-size:9px;color:#0a1628;line-height:1.2;margin-bottom:2px;">'+m.nom+'</div>'
+          +'<div style="font-size:8px;color:#1565C0;font-weight:700;font-family:monospace;">'+m.id+'</div>'
+          +'<div style="font-size:7px;color:#555;margin-top:1px;">Cotisation : <b style="color:#b8860b;">'+fmt(m.montant)+' F/mois</b></div>'
+          +(m.tel?'<div style="font-size:6.5px;color:#777;margin-top:1px;">'+m.tel+'</div>':'')
+          +((badgeFn||badgeDept)?'<div style="margin-top:2px;">'+badgeFn+badgeDept+'</div>':'')
+        +'</div>'
+        +'<div style="background:#f5f5f5;padding:2px;border-radius:3px;border:1px solid #ddd;flex-shrink:0;">'
+          +'<img src="'+qrUrl+'" width="75" height="75" style="display:block;" alt="QR '+m.id+'"/>'
+        +'</div>'
+      +'</div>'
+      // FOOTER période
+      +'<div style="border-top:1px solid #e8e8ff;padding-top:2px;">'
+        +'<div style="font-size:6px;color:#aaa;">'+TOUS_MOIS()[0]+' – '+TOUS_MOIS()[CFG.nb_mois-1]+'</div>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
 }
 
 
@@ -2935,387 +2720,50 @@ function imprimerToutesPVC() {
   imprimerCartesPVC(MEMBRES);
 }
 
-function imprimerCartesPVC(liste) {
-  var zone = document.getElementById('print-zone');
-  // Styles spéciaux pour impression PVC
-  var style = [
+function imprimerCartesPVC(liste){
+  var zone=document.getElementById('print-zone');
+  var style=[
     '<style>',
-    '@media print {',
-    '  @page { size: A4; margin: 8mm; }',
-    '  body { margin: 0; background: white; }',
-    '  #print-zone { display: block !important; }',
-    '  .no-print { display: none !important; }',
+    '@media print{',
+    '  @page{size:A4 portrait;margin:8mm;}',
+    '  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
+    '  .page-pvc{',
+    '    display:grid;',
+    '    grid-template-columns:85.6mm 85.6mm;',
+    '    grid-template-rows:repeat(5,54mm);',
+    '    gap:3mm;',
+    '    page-break-after:always;',
+    '    page-break-inside:avoid;',
+    '    width:fit-content;',
+    '    margin:0 auto;',
+    '  }',
+    '  .page-pvc:last-child{page-break-after:auto;}',
     '}',
-    '#print-zone-pvc {',
-    '  display: flex;',
-    '  flex-wrap: wrap;',
-    '  gap: 4mm;',
-    '  padding: 4mm;',
-    '  background: white;',
+    '.page-pvc{',
+    '  display:grid;',
+    '  grid-template-columns:85.6mm 85.6mm;',
+    '  grid-template-rows:repeat(5,54mm);',
+    '  gap:3mm;',
+    '  width:fit-content;',
+    '  margin:0 auto 8mm auto;',
     '}',
     '</style>'
   ].join('');
 
-  zone.innerHTML = style
-    + '<div id="print-zone-pvc">'
-    + liste.map(function(m){ return genCartePVCHTML(m); }).join('')
-    + '</div>';
+  // Grouper par 10 cartes par page (2 col x 5 lignes)
+  var pages=[];
+  for(var i=0;i<liste.length;i+=10) pages.push(liste.slice(i,i+10));
 
-  // Attendre le chargement des QR codes puis imprimer
-  setTimeout(function(){ window.print(); }, 2000);
-}
-// ══════════════════════════════════════════════════
-
-
-// ══ EXPORT EXCEL ══
-function exporterExcel() {
-  var tousMois = TOUS_MOIS();
-  var MC = MOIS_COURANT();
-
-  // Construire les options de mois
-  var optionsMois = tousMois.slice(0, MC+1).map(function(m, i) {
-    return '<option value="'+i+'"'+(i===MC?' selected':'')+'>'+m+'</option>';
+  var pagesHTML=pages.map(function(groupe){
+    // Compléter la dernière page avec des cartes vides si nécessaire
+    var cells=groupe.map(function(m){ return genCartePVCHTML(m); });
+    while(cells.length<10) cells.push('<div style="width:85.6mm;height:54mm;"></div>');
+    return '<div class="page-pvc">'+cells.join('')+'</div>';
   }).join('');
 
-  // Modal de sélection
-  var modalHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center" id="modal-excel">'
-    + '<div style="background:#0a1628;border:2px solid var(--or);border-radius:16px;padding:28px;max-width:440px;width:90%">'
-    + '<div style="font-weight:800;font-size:16px;color:var(--or);margin-bottom:6px">&#x1F4CA; Export Excel des cotisations</div>'
-    + '<div style="font-size:11px;color:var(--grisC);margin-bottom:18px">Le fichier contiendra tous les membres, leurs paiements mois par mois et les totaux.</div>'
-
-    + '<label style="font-size:12px;color:var(--grisC);font-weight:700;display:block;margin-bottom:6px">Exporter jusqu\'au mois :</label>'
-    + '<select id="excel-mois-fin" style="width:100%;padding:10px;background:#111d2a;color:var(--blanc);border:1px solid var(--or);border-radius:8px;font-size:13px;margin-bottom:18px">'
-    + optionsMois
-    + '</select>'
-
-    + '<label style="font-size:12px;color:var(--grisC);font-weight:700;display:block;margin-bottom:6px">Inclure les mois futurs payes en avance :</label>'
-    + '<select id="excel-inclure-futurs" style="width:100%;padding:10px;background:#111d2a;color:var(--blanc);border:1px solid #1a3a5a;border-radius:8px;font-size:13px;margin-bottom:20px">'
-    + '<option value="non">Non — Uniquement les mois passes</option>'
-    + '<option value="oui">Oui — Inclure les paiements anticipes</option>'
-    + '</select>'
-
-    + '<div style="display:flex;gap:10px">'
-    + '<button class="btn btn-vert" style="flex:1;padding:12px;font-size:13px" onclick="genererExcel()">&#x1F4CA; Générer le fichier Excel</button>'
-    + '<button class="btn btn-ghost" style="flex:1;padding:12px;font-size:13px" onclick="document.getElementById(&quot;modal-excel&quot;).remove()">Annuler</button>'
-    + '</div>'
-    + '</div></div>';
-
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  zone.innerHTML=style+pagesHTML;
+  // Attendre chargement QR codes puis imprimer
+  setTimeout(function(){window.print();},2000);
 }
 
-function genererExcel() {
-  var moisFinIdx = parseInt(document.getElementById('excel-mois-fin').value);
-  var inclureFuturs = document.getElementById('excel-inclure-futurs').value === 'oui';
-  document.getElementById('modal-excel').remove();
-
-  var tousMois = TOUS_MOIS();
-  var moisAffiches = [];
-
-  // Déterminer les colonnes de mois à afficher
-  if(inclureFuturs) {
-    // Tous les mois jusqu'à moisFinIdx + les mois futurs payés
-    for(var i=0; i<=moisFinIdx; i++) moisAffiches.push(i);
-    // Ajouter les mois futurs avec au moins 1 paiement
-    for(var i=moisFinIdx+1; i<CFG.nb_mois; i++) {
-      if(MEMBRES.some(function(m){ return m.paiements[i]&&m.paiements[i]!==0; })) {
-        moisAffiches.push(i);
-      }
-    }
-  } else {
-    for(var i=0; i<=moisFinIdx; i++) moisAffiches.push(i);
-  }
-
-  var nbMois = moisAffiches.length;
-
-  // ── Construire le contenu CSV (compatible Excel)
-  // Séparateur point-virgule pour Excel France/Afrique
-  var sep = ';';
-  var lignes = [];
-
-  // Titre
-  lignes.push(CFG.nom_eglise + ' - ' + CFG.nom_projet + sep.repeat(nbMois+2));
-  lignes.push('Export des cotisations - Jusqu\'au : ' + tousMois[moisFinIdx] + ' - Genere le : ' + new Date().toLocaleDateString('fr-FR') + sep.repeat(nbMois+2));
-  lignes.push('');
-
-  // En-tête
-  var headerRow = ['Code membre', 'Nom du membre', 'Cotisation/mois (F)'];
-  moisAffiches.forEach(function(i){ headerRow.push(tousMois[i]); });
-  headerRow.push('Total verse (F)');
-  headerRow.push('Mois payes');
-  lignes.push(headerRow.join(sep));
-
-  // Données membres
-  var totauxParMois = Array(nbMois).fill(0);
-  var totalGlobal = 0;
-  var totalMoisPayes = 0;
-
-  MEMBRES.forEach(function(m) {
-    var row = [m.id, m.nom, m.montant];
-    var totalMembre = 0;
-    var nbPayesMembre = 0;
-
-    moisAffiches.forEach(function(idx, col) {
-      var p = m.paiements[idx];
-      var paye = p && p !== 0;
-      if(paye) {
-        row.push('OUI');
-        totalMembre += m.montant;
-        nbPayesMembre++;
-        totauxParMois[col] += m.montant;
-      } else {
-        row.push('');
-      }
-    });
-
-    row.push(totalMembre);
-    row.push(nbPayesMembre);
-    totalGlobal += totalMembre;
-    totalMoisPayes += nbPayesMembre;
-    lignes.push(row.join(sep));
-  });
-
-  // Ligne vide
-  lignes.push('');
-
-  // Ligne totaux par mois
-  var rowTotaux = ['', 'TOTAL ENCAISSE PAR MOIS', ''];
-  totauxParMois.forEach(function(t){ rowTotaux.push(t > 0 ? t : ''); });
-  rowTotaux.push(totalGlobal);
-  rowTotaux.push(totalMoisPayes);
-  lignes.push(rowTotaux.join(sep));
-
-  // Ligne nombre de cotisants par mois
-  var rowNb = ['', 'NOMBRE DE COTISANTS', ''];
-  moisAffiches.forEach(function(idx) {
-    var nb = MEMBRES.filter(function(m){ return m.paiements[idx]&&m.paiements[idx]!==0; }).length;
-    rowNb.push(nb > 0 ? nb : '');
-  });
-  rowNb.push(MEMBRES.length + ' membres');
-  rowNb.push('');
-  lignes.push(rowNb.join(sep));
-
-  // Ligne taux de collecte par mois
-  var rowTaux = ['', 'TAUX DE COLLECTE (%)', ''];
-  moisAffiches.forEach(function(idx) {
-    var nb = MEMBRES.filter(function(m){ return m.paiements[idx]&&m.paiements[idx]!==0; }).length;
-    var taux = MEMBRES.length > 0 ? Math.round(nb/MEMBRES.length*100) : 0;
-    rowTaux.push(nb > 0 ? taux+'%' : '');
-  });
-  rowTaux.push('');
-  rowTaux.push('');
-  lignes.push(rowTaux.join(sep));
-
-  // ── Section encaissements par jour de validation
-  lignes.push('');
-  lignes.push('ENCAISSEMENTS PAR JOUR DE VALIDATION' + sep.repeat(3));
-  lignes.push(['Jour de validation', 'Nb cotisants', 'Montant encaisse (F)', '% du total global'].join(sep));
-
-  var parJour = {};
-  MEMBRES.forEach(function(m) {
-    m.paiements.forEach(function(p, idx) {
-      if(!p || p===0 || p===1) return;
-      var d = new Date(p);
-      var dateKey = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-      var dateLabel = d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-      if(!parJour[dateKey]) parJour[dateKey] = {total:0, nb:0, label:dateLabel};
-      parJour[dateKey].total += m.montant;
-      parJour[dateKey].nb++;
-    });
-  });
-
-  var joursKeys = Object.keys(parJour).sort().reverse();
-  var totalJours = joursKeys.reduce(function(s,k){ return s+parJour[k].total; }, 0);
-  var nbJours = joursKeys.reduce(function(s,k){ return s+parJour[k].nb; }, 0);
-
-  joursKeys.forEach(function(k) {
-    var j = parJour[k];
-    var pct = totalJours > 0 ? Math.round(j.total/totalJours*100) : 0;
-    lignes.push([j.label, j.nb, j.total, pct+'%'].join(sep));
-  });
-
-  // Ligne total jours
-  lignes.push(['TOTAL', nbJours, totalJours, '100%'].join(sep));
-  lignes.push('');
-
-  // ── Téléchargement
-  var csv = '\uFEFF' + lignes.join('\r\n'); // BOM UTF-8 pour Excel
-  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  var dateStr = new Date().toISOString().slice(0,10);
-  a.href = url;
-  a.download = 'cotisations_ARR_' + dateStr + '_jusqu_' + tousMois[moisFinIdx].replace(/ /g,'_') + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  notifier('&#x2705; Fichier Excel téléchargé — ' + MEMBRES.length + ' membres, ' + nbMois + ' mois');
-}
-// ══════════════════════════════════════════════════
-
-
-// ── SAUVEGARDE AUTOMATIQUE QUOTIDIENNE ──
-function sauvegardeAutomatique() {
-  if(!MEMBRES.length) return;
-  var today = new Date().toISOString().slice(0,10);
-  var lastBackup = localStorage.getItem('temple_last_backup_date');
-  if(lastBackup === today) return; // déjà sauvegardé aujourd'hui
-  
-  try {
-    // Garder les 7 derniers jours de backup
-    var backupKey = 'temple_backup_' + today;
-    localStorage.setItem(backupKey, JSON.stringify({
-      date: today,
-      membres: MEMBRES,
-      cfg: CFG,
-      total: MEMBRES.reduce(function(s,m){ return s+m.paiements.filter(function(p){return p&&p!==0;}).length*m.montant; }, 0)
-    }));
-    localStorage.setItem('temple_last_backup_date', today);
-    
-    // Purger les backups de plus de 7 jours
-    Object.keys(localStorage).forEach(function(k) {
-      if(k.startsWith('temple_backup_') && k !== backupKey && k !== 'temple_backup_'+today) {
-        var dateStr = k.replace('temple_backup_', '');
-        var diff = (new Date(today) - new Date(dateStr)) / (1000*60*60*24);
-        if(diff > 7) localStorage.removeItem(k);
-      }
-    });
-    console.log('Backup automatique sauvegardé:', today);
-  } catch(e) { console.log('Backup auto échoué:', e); }
-}
-
-function restaurerBackup() {
-  // Lister les backups disponibles
-  var backups = [];
-  Object.keys(localStorage).forEach(function(k) {
-    if(k.startsWith('temple_backup_')) {
-      try {
-        var data = JSON.parse(localStorage.getItem(k));
-        if(data && data.membres) backups.push({key:k, date:data.date, nb:data.membres.length, total:data.total});
-      } catch(e){}
-    }
-  });
-  backups.sort(function(a,b){ return b.date.localeCompare(a.date); });
-  
-  if(!backups.length) {
-    notifier('&#x26A0; Aucun backup local disponible','danger');
-    return;
-  }
-  
-  var lignes = backups.map(function(b) {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#111d2a;border-radius:8px;margin-bottom:8px">'
-      + '<div>'
-      + '<div style="font-weight:700;color:#ddeeff;font-size:13px">Backup du ' + b.date + '</div>'
-      + '<div style="font-size:11px;color:#8899aa">' + b.nb + ' membres · ' + (b.total||0).toLocaleString('fr-FR') + ' F encaissés</div>'
-      + '</div>'
-      + '<button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="confirmerRestauration(&quot;' + b.key + '&quot;)">&#x21A9; Restaurer</button>'
-      + '</div>';
-  }).join('');
-  
-  var modalHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center" id="modal-backup">'
-    + '<div style="background:#0a1628;border:2px solid var(--or);border-radius:16px;padding:24px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto">'
-    + '<div style="font-weight:800;font-size:15px;color:var(--or);margin-bottom:16px">&#x1F4BE; Restaurer un backup local</div>'
-    + lignes
-    + '<button class="btn btn-ghost btn-full" style="margin-top:12px" onclick="document.getElementById(&quot;modal-backup&quot;).remove()">Fermer</button>'
-    + '</div></div>';
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function confirmerRestauration(key) {
-  if(!confirm('Restaurer ce backup ? Les données actuelles seront remplacées.')) return;
-  try {
-    var data = JSON.parse(localStorage.getItem(key));
-    if(!data || !data.membres) { notifier('&#x26A0; Backup invalide','danger'); return; }
-    MEMBRES = data.membres;
-    sauvegarder();
-    sauvegarderCloud();
-    document.getElementById('modal-backup') && document.getElementById('modal-backup').remove();
-    notifier('&#x2705; ' + MEMBRES.length + ' membres restaurés depuis le backup du ' + data.date);
-    changerVue('membres');
-  } catch(e) { notifier('&#x26A0; Erreur lors de la restauration','danger'); }
-}
-// ────────────────────────────────────────────────────
-
-
-// ── TOGGLES SE SOUVENIR DE MOI ──
-function toggleRememberComite() {
-  var cb     = document.getElementById('remember-comite');
-  var toggle = document.getElementById('toggle-remember-comite');
-  var knob   = document.getElementById('toggle-knob-comite');
-  if (!cb || !toggle || !knob) return;
-  cb.checked = !cb.checked;
-  if (cb.checked) {
-    toggle.style.background = '#0d5c3a';
-    knob.style.background   = '#4eff9b';
-    knob.style.left         = '22px';
-  } else {
-    toggle.style.background = '#1a3a5a';
-    knob.style.background   = '#8899aa';
-    knob.style.left         = '2px';
-  }
-}
-// ────────────────────────────────
-
-var WA_MSG_COURANT = '';
-var WA_TEL_COURANT = '';
-function ouvrirWhatsappRecu() {
-  var url = 'https://wa.me/' + WA_TEL_COURANT + '?text=' + encodeURIComponent(WA_MSG_COURANT);
-  window.open(url, '_blank');
-}
-
-if('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js').then(function(reg){
-      console.log('SW enregistré:', reg.scope);
-    }).catch(function(err){
-      console.log('SW erreur:', err);
-    });
-  });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btn-role-comite').addEventListener('click',   function(){ choisirRole('comite'); });
-  document.getElementById('btn-role-lecteur').addEventListener('click', function(){ choisirRole('lecteur'); });
-  document.getElementById('btn-role-admin').addEventListener('click',   function(){ choisirRole('admin'); });
-  document.getElementById('btn-connexion').addEventListener('click', tentativeConnexion);
-  document.getElementById('btn-lecteur-connexion').addEventListener('click', tentativeConnexionLecteur);
-  document.getElementById('login-lecteur-user').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('login-lecteur-pass').focus(); });
-  document.getElementById('login-lecteur-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') tentativeConnexionLecteur(); });
-  document.getElementById('btn-admin-connexion').addEventListener('click', tentativeConnexionAdmin);
-  document.getElementById('login-user').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('login-pass').focus(); });
-  document.getElementById('login-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') tentativeConnexion(); });
-  document.getElementById('login-admin-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') tentativeConnexionAdmin(); });
-  ['membres','dashboard','stats','scanner','cartes','sauvegarde','parametres','admin'].forEach(function(v){
-    var el=document.getElementById('nav-'+v); if(el) el.addEventListener('click',function(){changerVue(v);});
-  });
-  document.getElementById('btn-add-top').addEventListener('click', function(){ ouvrirFormulaire(); });
-  document.getElementById('logo-file-input').addEventListener('change', function(){ traiterLogo(this.files[0]); this.value=''; });
-  document.getElementById('header-logo-wrap').addEventListener('click', ouvrirUploadLogo);
-  document.getElementById('btn-confirmer-suppr').addEventListener('click', confirmerSuppression);
-  document.getElementById('btn-annuler-suppr').addEventListener('click', fermerModal);
-
-  charger(); chargerLogo(); mettreAJourHeader(); setTimeout(sauvegardeAutomatique, 3000);
-  afficherVue();
-
-  var sess = localStorage.getItem('temple_session') || sessionStorage.getItem('temple_session');
-  if (sess) {
-    try {
-      var sessObj = JSON.parse(sess);
-      if (sessObj.expire && Date.now() > sessObj.expire) {
-        localStorage.removeItem('temple_session');
-        sessionStorage.removeItem('temple_session');
-        chargerDepuisCloud().catch(function(){}); choisirRole('comite');
-      } else {
-        COMPTE_ACTUEL = sessObj; ROLE_ACTUEL = COMPTE_ACTUEL.role;
-        chargerDepuisCloud().then(function(){ ouvrirApp(); }).catch(function(){ ouvrirApp(); });
-      }
-    } catch(e) { localStorage.removeItem('temple_session'); sessionStorage.removeItem('temple_session'); choisirRole('comite'); }
-  } else {
-    chargerDepuisCloud().catch(function(){});
-    choisirRole('comite');
-  }
-});
-</script>
-</body>
-</html>
+>
