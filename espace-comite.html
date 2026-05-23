@@ -159,9 +159,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <div style="color:#334455;font-size:13px;margin-top:6px">Gestion des cotisations</div>
     <div id="sync-status-login" style="margin-top:10px"></div>
   </div>
-  <div style="width:100%;max-width:340px;margin-bottom:14px;display:flex;gap:10px">
-    <button id="btn-role-comite" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;background:linear-gradient(135deg,#0d5c3a,#164a30);border:1px solid rgba(78,255,155,0.3);color:#4eff9b">👥 Comité</button>
-    <button id="btn-role-admin" style="flex:1;padding:14px;border-radius:12px;cursor:pointer;font-weight:700;font-size:13px;font-family:inherit;background:#0a1628;border:1px solid rgba(100,212,255,0.3);color:#64d4ff;opacity:0.5">🛡 Admin</button>
+  <div style="width:100%;max-width:340px;margin-bottom:14px;display:flex;gap:8px">
+    <button id="btn-role-comite" style="flex:1;padding:12px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;border:none;font-family:inherit" onclick="choisirRole('comite')">👥 Comité</button>
+    <button id="btn-role-lecteur" style="flex:1;padding:12px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;border:none;font-family:inherit" onclick="choisirRole('lecteur')">👁 Lecteur</button>
+    <button id="btn-role-admin" style="flex:1;padding:12px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;border:none;font-family:inherit" onclick="choisirRole('admin')">🛡 Admin</button>
   </div>
   <div id="login-comite" style="background:#0f1923;border:1px solid rgba(78,255,155,0.2);border-radius:16px;padding:24px;width:100%;max-width:340px">
     <div style="color:#8899aa;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Identifiant</div>
@@ -177,6 +178,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     </div>
     <button id="btn-connexion" style="background:linear-gradient(135deg,#0d5c3a,#164a30);border:1px solid rgba(78,255,155,0.3);color:#4eff9b;border-radius:10px;padding:13px;width:100%;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">🔓 Se connecter</button>
     <div id="login-err" style="display:none;color:#ff6b6b;font-size:12px;text-align:center;margin-top:10px"></div>
+  </div>
+  <div id="login-lecteur" style="background:#0f1923;border:1px solid rgba(100,212,255,0.2);border-radius:16px;padding:24px;width:100%;max-width:340px;display:none;margin-bottom:14px">
+    <div style="color:#8899aa;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Identifiant</div>
+    <input id="login-lecteur-user" type="text" placeholder="Ex : pasteur.dupont" autocapitalize="none" style="background:#111d2a;border:1px solid #1a2a3a;border-radius:10px;padding:12px 14px;color:#ddeeff;font-size:15px;letter-spacing:1px;width:100%;outline:none;font-family:inherit;margin-bottom:14px"/>
+    <div style="color:#8899aa;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Mot de passe</div>
+    <input id="login-lecteur-pass" type="password" placeholder="••••••••" style="background:#111d2a;border:1px solid #1a2a3a;border-radius:10px;padding:12px 14px;color:#ddeeff;font-size:15px;letter-spacing:3px;width:100%;outline:none;font-family:inherit;margin-bottom:14px"/>
+    <div id="login-lecteur-err" style="display:none;color:var(--rouge);font-size:12px;margin-bottom:10px;padding:8px 12px;background:var(--rougeD);border-radius:8px"></div>
+    <button id="btn-lecteur-connexion" style="width:100%;padding:14px;border-radius:12px;font-weight:700;font-size:15px;border:none;cursor:pointer;font-family:inherit">👁 Accès Lecteur</button>
   </div>
   <div id="login-admin" style="display:none;background:#0a1628;border:1px solid rgba(100,212,255,0.2);border-radius:16px;padding:24px;width:100%;max-width:340px">
     <div style="color:#64d4ff;font-weight:700;font-size:13px;margin-bottom:14px">🛡 Connexion Administrateur</div>
@@ -483,11 +492,14 @@ function sauvegarderComptes(c) {
 }
 
 function choisirRole(role) {
-  document.getElementById('login-comite').style.display = role==='comite'?'block':'none';
-  document.getElementById('login-admin').style.display  = role==='admin'?'block':'none';
-  document.getElementById('btn-role-comite').style.opacity = role==='comite'?'1':'0.5';
-  document.getElementById('btn-role-admin').style.opacity  = role==='admin'?'1':'0.5';
-  setTimeout(function(){ var el=document.getElementById(role==='comite'?'login-user':'login-admin-pass'); if(el) el.focus(); }, 50);
+  document.getElementById('login-comite').style.display  = role==='comite'?'block':'none';
+  document.getElementById('login-lecteur').style.display = role==='lecteur'?'block':'none';
+  document.getElementById('login-admin').style.display   = role==='admin'?'block':'none';
+  document.getElementById('btn-role-comite').style.opacity  = role==='comite'?'1':'0.5';
+  document.getElementById('btn-role-lecteur').style.opacity = role==='lecteur'?'1':'0.5';
+  document.getElementById('btn-role-admin').style.opacity   = role==='admin'?'1':'0.5';
+  var focus = role==='comite'?'login-user':role==='lecteur'?'login-lecteur-user':'login-admin-pass';
+  setTimeout(function(){ var el=document.getElementById(focus); if(el) el.focus(); }, 50);
 }
 
 async function tentativeConnexion() {
@@ -506,6 +518,26 @@ async function tentativeConnexion() {
     sessionStorage.setItem('temple_session', sessDataC);
     ouvrirApp();
   } else { showLoginErr(errEl,'Identifiant ou mot de passe incorrect'); document.getElementById('login-pass').value=''; }
+}
+
+async function tentativeConnexionLecteur() {
+  var userId=document.getElementById('login-lecteur-user').value.trim().toLowerCase();
+  var pass=document.getElementById('login-lecteur-pass').value;
+  var errEl=document.getElementById('login-lecteur-err');
+  if (!userId||!pass) { showLoginErr(errEl,'Identifiant et mot de passe requis'); return; }
+  var comptes=getComptes()||await initCompteParDefaut();
+  var h=await sha256(pass);
+  // Chercher dans la liste des lecteurs
+  var lecteurs = comptes.lecteurs || [];
+  if(!Array.isArray(lecteurs)) lecteurs = Object.values(lecteurs);
+  var compte = lecteurs.find(function(c){ return c.id===userId&&c.hash===h; });
+  if (compte) {
+    ROLE_ACTUEL='lecteur'; COMPTE_ACTUEL={id:compte.id,nom:compte.nom,role:'lecteur'};
+    var sessData = JSON.stringify(Object.assign({}, COMPTE_ACTUEL, {expire: Date.now()+30*24*60*60*1000}));
+    localStorage.setItem('temple_session', sessData);
+    sessionStorage.setItem('temple_session', sessData);
+    ouvrirApp();
+  } else { showLoginErr(errEl,'Identifiant ou mot de passe incorrect'); document.getElementById('login-lecteur-pass').value=''; }
 }
 
 async function tentativeConnexionAdmin() {
@@ -527,8 +559,18 @@ function showLoginErr(el,msg) { el.textContent='&#x26A0; '+msg; el.style.display
 
 function ouvrirApp() {
   document.getElementById('login-overlay').style.display='none';
-  var navAdmin=document.getElementById('nav-admin');
-  if (navAdmin) navAdmin.style.display=ROLE_ACTUEL==='admin'?'inline-flex':'none';
+  var navAdmin   = document.getElementById('nav-admin');
+  var navScanner = document.getElementById('nav-scanner');
+  var navSauveg  = document.getElementById('nav-sauvegarde');
+  var navParams  = document.getElementById('nav-parametres');
+  var btnAdd     = document.getElementById('btn-add-top');
+  // Lecteur : accès lecture seule — cacher actions
+  var isLecteur = ROLE_ACTUEL==='lecteur';
+  if (navAdmin)   navAdmin.style.display   = ROLE_ACTUEL==='admin'?'inline-flex':'none';
+  if (navScanner) navScanner.style.display  = isLecteur?'none':'inline-flex';
+  if (navSauveg)  navSauveg.style.display   = isLecteur?'none':'inline-flex';
+  if (navParams)  navParams.style.display   = isLecteur?'none':'inline-flex';
+  if (btnAdd)     btnAdd.style.display      = isLecteur?'none':'';
   rafraichirBarreRole();
   journaliser('CONNEXION', COMPTE_ACTUEL.nom+' ('+COMPTE_ACTUEL.role+') connecté');
   demarrerSyncAuto();
@@ -611,6 +653,11 @@ function journaliser(action,detail){try{var j=JSON.parse(localStorage.getItem('t
 
 function changerVue(vue){
   if(vue==='admin'&&ROLE_ACTUEL!=='admin'){notifier('&#x26D4; Accès réservé à l\'administrateur','danger');return;}
+  var vuesInterdites=['scanner','sauvegarde','parametres'];
+  if(ROLE_ACTUEL==='lecteur'&&vuesInterdites.indexOf(vue)>=0){
+    notifier('&#x1F441; Accès lecture seule — action non autorisée','danger');
+    return;
+  }
   VUE_ACTUELLE=vue;
   ['membres','dashboard','stats','scanner','cartes','sauvegarde','parametres','admin'].forEach(function(v){var el=document.getElementById('nav-'+v);if(el)el.classList.toggle('active',v===vue);});
   document.getElementById('btn-add-top').style.display=vue==='membres'?'inline-flex':'none';
@@ -940,6 +987,7 @@ function togglePaiement(id,idx){
 
 // FORMULAIRE
 function ouvrirFormulaire(id){
+  if(ROLE_ACTUEL==='lecteur'){notifier('&#x1F441; Accès lecture seule','danger');return;}
   // Ajout d'un nouveau membre : réservé à l'Admin uniquement
   if(!id && ROLE_ACTUEL !== 'admin'){
     notifier('&#x26D4; L\'ajout de nouveaux membres est réservé à l\'administrateur.','danger');
@@ -1389,13 +1437,179 @@ function vueStats() {
           +'</div>';
         }).join('');
       })(),
-    '</div>',  ].join('');
+    '</div>',
+// ── GRAPHE 1 : Camembert répartition statuts ──
+'<div class="card" style="margin-bottom:14px">',
+  '<div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px">Répartition des membres</div>',
+  (function(){
+    var ajour   = MEMBRES.filter(function(m){ return statutMembre(m)==='ajour'; }).length;
+    var retard  = MEMBRES.filter(function(m){ return statutMembre(m)==='retard'; }).length;
+    var inactif = MEMBRES.filter(function(m){ return statutMembre(m)==='inactif'; }).length;
+    var total   = MEMBRES.length;
+    if(!total) return '<div style="color:var(--grisC);text-align:center;padding:20px">Aucun membre</div>';
+
+    // SVG camembert
+    function slice(pct, offset, color){
+      if(pct<=0) return '';
+      if(pct>=1) return '<circle cx="60" cy="60" r="50" fill="'+color+'" />';
+      var r=50, cx=60, cy=60;
+      var startAngle = offset*2*Math.PI - Math.PI/2;
+      var endAngle   = (offset+pct)*2*Math.PI - Math.PI/2;
+      var x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
+      var x2=cx+r*Math.cos(endAngle),   y2=cy+r*Math.sin(endAngle);
+      var large=pct>0.5?1:0;
+      return '<path d="M'+cx+','+cy+' L'+x1+','+y1+' A'+r+','+r+' 0 '+large+',1 '+x2+','+y2+' Z" fill="'+color+'"/>';
+    }
+    var pA=ajour/total, pR=retard/total, pI=inactif/total;
+    var svg='<svg width="120" height="120" viewBox="0 0 120 120">'
+      +slice(pA, 0, '#4eff9b')
+      +slice(pR, pA, '#ffb347')
+      +slice(pI, pA+pR, '#ff6b6b')
+      +'</svg>';
+
+    var legende=[
+      ['#4eff9b','À jour',ajour,Math.round(pA*100)],
+      ['#ffb347','En retard',retard,Math.round(pR*100)],
+      ['#ff6b6b','Inactifs',inactif,Math.round(pI*100)]
+    ].map(function(x){
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+        +'<div style="width:12px;height:12px;border-radius:50%;background:'+x[0]+';flex-shrink:0;"></div>'
+        +'<div style="flex:1;font-size:12px;color:var(--grisC)">'+x[1]+'</div>'
+        +'<div style="font-weight:700;color:'+x[0]+';font-size:13px">'+x[2]+'</div>'
+        +'<div style="font-size:11px;color:var(--grisT);min-width:35px;text-align:right">'+x[3]+'%</div>'
+        +'</div>';
+    }).join('');
+
+    return '<div style="display:flex;align-items:center;gap:20px">'
+      +svg
+      +'<div style="flex:1">'+legende+'<div style="font-size:10px;color:var(--grisT);margin-top:6px;border-top:1px solid var(--border);padding-top:6px">Total : '+total+' membres</div></div>'
+      +'</div>';
+  })(),
+'</div>',
+
+// ── GRAPHE 2 : Répartition par département ──
+'<div class="card" style="margin-bottom:14px">',
+  '<div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:12px">Collecte par département</div>',
+  (function(){
+    if(!MEMBRES.length) return '<div style="color:var(--grisC);text-align:center;padding:20px">Aucun membre</div>';
+    var MC=MOIS_COURANT();
+    // Grouper par département
+    var depts={};
+    MEMBRES.forEach(function(m){
+      var d=m.departement||'Non renseigné';
+      if(!depts[d]) depts[d]={total:0,payes:0,nb:0,verse:0};
+      depts[d].nb++;
+      var p=m.paiements.filter(function(x,i){return x&&x!==0&&i<=MC;}).length;
+      var dus=MC+1;
+      depts[d].payes+=p;
+      depts[d].total+=dus;
+      depts[d].verse+=p*m.montant;
+    });
+    var sorted=Object.keys(depts).sort(function(a,b){
+      var ta=depts[a].total>0?depts[a].payes/depts[a].total:0;
+      var tb=depts[b].total>0?depts[b].payes/depts[b].total:0;
+      return tb-ta;
+    });
+    var colors=['#4eff9b','#64d4ff','#c084fc','#ffb347','#ff9f7f','#a3e4d7','#f9e79f','#aab7b8'];
+    return sorted.map(function(d,i){
+      var info=depts[d];
+      var taux=info.total>0?Math.round(info.payes/info.total*100):0;
+      var col=colors[i%colors.length];
+      return '<div style="margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+          +'<div style="font-size:11px;color:var(--blanc);font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+d+'</div>'
+          +'<div style="font-size:10px;color:var(--grisC);margin-left:8px">'+info.nb+' mbr &nbsp;·&nbsp; '+fmt(info.verse)+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+col+';margin-left:8px;min-width:35px;text-align:right">'+taux+'%</div>'
+        +'</div>'
+        +'<div style="background:#1a2a3a;border-radius:4px;height:8px;overflow:hidden">'
+          +'<div style="height:100%;width:'+taux+'%;background:'+col+';border-radius:4px;transition:width .5s"></div>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+  })(),
+'</div>',
+
+// ── GRAPHE 3 : Courbe évolution cumulative ──
+'<div class="card" style="margin-bottom:14px">',
+  '<div style="color:var(--grisC);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px">Évolution cumulative des encaissements</div>',
+  (function(){
+    var MC=MOIS_COURANT();
+    var tousMois=TOUS_MOIS();
+    if(!MEMBRES.length) return '<div style="color:var(--grisC);text-align:center;padding:20px">Aucun membre</div>';
+
+    // Calculer le cumulatif mois par mois
+    var cumul=0;
+    var points=[];
+    for(var i=0;i<=MC;i++){
+      var mensuel=MEMBRES.reduce(function(s,m){ return s+(m.paiements[i]&&m.paiements[i]!==0?m.montant:0); },0);
+      cumul+=mensuel;
+      points.push({label:tousMois[i], mensuel:mensuel, cumul:cumul});
+    }
+    if(!points.length) return '<div style="color:var(--grisC);text-align:center;padding:20px">Pas encore de données</div>';
+
+    var maxCumul=points[points.length-1].cumul||1;
+    var maxMensuel=Math.max.apply(null,points.map(function(p){return p.mensuel;}))||1;
+    var W=280, H=100, pad=4;
+
+    // Points de la courbe cumulative
+    var ptsCumul=points.map(function(p,i){
+      var x=pad+i*(W-2*pad)/(Math.max(points.length-1,1));
+      var y=H-pad-(p.cumul/maxCumul)*(H-2*pad);
+      return x.toFixed(1)+','+y.toFixed(1);
+    }).join(' ');
+
+    // Barres mensuelles
+    var bw=Math.max(2, (W-2*pad)/points.length*0.6);
+    var barres=points.map(function(p,i){
+      var x=pad+i*(W-2*pad)/(Math.max(points.length-1,1))-bw/2;
+      var bh=(p.mensuel/maxMensuel)*(H-2*pad)*0.4;
+      var y=H-pad-bh;
+      return '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" fill="#64d4ff" opacity="0.3" rx="1"/>';
+    }).join('');
+
+    // Labels début/milieu/fin
+    var labelStep=Math.max(1,Math.floor(points.length/4));
+    var labels=points.filter(function(_,i){ return i%labelStep===0||i===points.length-1; }).map(function(p,i,arr){
+      var idx=points.indexOf(p);
+      var x=pad+idx*(W-2*pad)/(Math.max(points.length-1,1));
+      return '<text x="'+x.toFixed(1)+'" y="'+(H+10)+'" text-anchor="middle" font-size="7" fill="#556677">'+p.label+'</text>';
+    }).join('');
+
+    var svg='<svg width="100%" viewBox="0 0 '+(W+20)+' '+(H+20)+'" style="overflow:visible">'
+      // Grille
+      +'<line x1="'+pad+'" y1="'+pad+'" x2="'+pad+'" y2="'+(H-pad)+'" stroke="#1a3a5a" stroke-width="1"/>'
+      +'<line x1="'+pad+'" y1="'+(H-pad)+'" x2="'+(W-pad)+'" y2="'+(H-pad)+'" stroke="#1a3a5a" stroke-width="1"/>'
+      // Barres mensuelles
+      +barres
+      // Courbe cumulative
+      +'<polyline points="'+ptsCumul+'" fill="none" stroke="#4eff9b" stroke-width="2" stroke-linejoin="round"/>'
+      // Points
+      +points.map(function(p,i){
+        var x=pad+i*(W-2*pad)/(Math.max(points.length-1,1));
+        var y=H-pad-(p.cumul/maxCumul)*(H-2*pad);
+        return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#4eff9b"/>';
+      }).join('')
+      // Labels
+      +labels
+      // Label total final
+      +'<text x="'+(W-pad)+'" y="'+(H-pad-(points[points.length-1].cumul/maxCumul)*(H-2*pad)-6)+'" text-anchor="end" font-size="8" fill="#4eff9b" font-weight="bold">'+fmt(maxCumul)+'</text>'
+      +'</svg>';
+
+    return svg
+      +'<div style="display:flex;gap:16px;margin-top:6px;font-size:10px">'
+      +'<div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:2px;background:#4eff9b"></div><span style="color:var(--grisC)">Cumulatif</span></div>'
+      +'<div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:8px;background:#64d4ff;opacity:.5;border-radius:1px"></div><span style="color:var(--grisC)">Mensuel</span></div>'
+      +'</div>';
+  })(),
+'</div>',
+  ].join('');
 }
 
 function vueDashboard(){var aJour=MEMBRES.filter(function(m){return statutMembre(m)==='ajour';}).length;var retard=MEMBRES.filter(function(m){return statutMembre(m)==='retard';}).length;var verse=MEMBRES.reduce(function(s,m){return s+m.paiements.filter(function(p,i){return p&&p!==0;}).length*m.montant;},0);var attendu=MEMBRES.reduce(function(s,m){return s+m.montant*(MOIS_COURANT()+1);},0);var taux=attendu>0?Math.round(verse/attendu*100):0;var payesCeMois=MEMBRES.filter(function(m){return m.paiements[MOIS_COURANT()];}).length;var retardListe=MEMBRES.filter(function(m){return statutMembre(m)!=='ajour';}).slice(0,8).map(function(m){var r=m.paiements.filter(function(p,i){return !p&&i<=MOIS_COURANT();}).length;return'<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:13px">'+m.nom+'</div><div style="color:var(--grisC);font-size:11px">'+r+' mois · dette: '+fmt(r*m.montant)+'</div></div>'+badgeHTML(statutMembre(m))+'</div>';}).join('');return['<div style="background:linear-gradient(135deg,#0a1e14,#0d2a1a);border:1px solid rgba(78,255,155,0.2);border-radius:14px;padding:16px 18px;display:flex;gap:14px;align-items:center;margin-bottom:14px">','<div style="font-size:36px">&#x1F4C5;</div><div><div style="color:var(--vert);font-weight:800;font-size:15px">Collecte – '+TOUS_MOIS()[MOIS_COURANT()]+'</div><div style="color:var(--grisC);font-size:13px;margin-top:2px"><b style="color:var(--blanc)">'+payesCeMois+'</b> membres ont payé · <b style="color:var(--or)">'+(MEMBRES.length-payesCeMois)+'</b> en attente</div></div></div>','<div class="grid-2" style="margin-bottom:14px">',[['Total encaissé',fmt(verse),'var(--vert)','#0a1e14'],['Taux',taux+'%','var(--bleu)','#0a1428'],['À jour',aJour+' membres','var(--vert)','#0a1e14'],['En retard',retard+' membres','var(--or)','#1e140a']].map(function(x){return'<div class="stat-box" style="background:'+x[3]+';border:1px solid '+x[2]+'22"><div style="color:var(--grisC);font-size:10px;font-weight:700;text-transform:uppercase">'+x[0]+'</div><div style="color:'+x[2]+';font-weight:900;font-size:22px;margin-top:6px">'+x[1]+'</div></div>';}).join(''),'</div>','<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="color:var(--grisC);font-size:12px;font-weight:700">PROGRESSION</span><span style="color:var(--vert);font-weight:700">'+taux+'%</span></div><div class="progress-track"><div class="progress-fill" style="width:'+taux+'%"></div></div></div>','<div class="card"><div style="color:var(--or);font-weight:800;font-size:13px;margin-bottom:12px">&#x26A0; MEMBRES EN RETARD</div>',retardListe||'<div style="color:var(--grisC);text-align:center;padding:16px;font-size:13px">&#x1F389; Tous les membres sont à jour !</div>','</div>'].join('');}
 
 // VALIDATION
 function ouvrirValidation(id){
+  if(ROLE_ACTUEL==='lecteur'){notifier('&#x1F441; Accès lecture seule','danger');return;}
   MEMBRE_VALIDATION=MEMBRES.find(function(x){return x.id===id;});
   if(!MEMBRE_VALIDATION)return;
   var MC=MOIS_COURANT();
@@ -2157,9 +2371,41 @@ function vueAdmin(){if(ROLE_ACTUEL!=='admin')return'<div style="text-align:cente
 return['<div style="background:linear-gradient(135deg,#0a1628,#0d1e3a);border:1px solid rgba(100,212,255,0.2);border-radius:14px;padding:18px;margin-bottom:14px"><div style="color:var(--bleu);font-weight:900;font-size:17px;margin-bottom:4px">&#x1F6E1; Panneau Administrateur</div><div style="color:var(--grisC);font-size:12px">Connecté : <b style="color:var(--bleu)">'+COMPTE_ACTUEL.nom+'</b></div></div>',
 '<div class="card" style="border-color:rgba(78,255,155,0.15)"><div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:14px">&#x1F5BC; Logo</div><div style="display:flex;gap:16px;align-items:center;margin-bottom:14px">',LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:72px;height:72px;border-radius:12px;object-fit:cover"/>':'<div style="width:72px;height:72px;border-radius:12px;background:#111d2a;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:32px">⛪</div>','<div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="btn-upload-logo" class="btn btn-primary" style="font-size:12px;padding:8px 14px">&#x1F4C1; Choisir</button>',LOGO_DATA?'<button id="btn-suppr-logo" class="btn btn-danger" style="font-size:12px;padding:8px 14px">&#x1F5D1; Supprimer</button>':'',' </div></div></div></div>',
 '<div class="card" style="border-color:rgba(100,212,255,0.2)"><div style="color:var(--bleu);font-weight:800;font-size:14px;margin-bottom:14px">&#x1F6E1; Compte Admin</div><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0"><div><div style="font-weight:600">'+comptes.admin.nom+'</div></div><button onclick="changerMdpAdmin()" class="btn btn-bleu" style="font-size:11px;padding:6px 12px">&#x1F512; Changer MDP</button></div></div>',
-'<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="color:var(--vert);font-weight:800;font-size:14px">&#x1F465; Comptes Comité ('+(comptes.comite||[]).length+')</div><button onclick="ajouterCompteComite()" class="btn btn-primary" style="font-size:12px;padding:7px 14px">&#x2795; Nouveau</button></div>',comptesHTML,'</div>',
+'<div class="card" style="margin-bottom:14px;border-color:rgba(100,212,255,0.15)">','<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">','<div style="color:var(--bleu);font-weight:800;font-size:14px">&#x1F441; Comptes Lecteurs ('+(function(){ var c=getComptes(); var l=c&&c.lecteurs?c.lecteurs:{}; return Object.keys(l).length; }())+')</div>','<button onclick="ajouterCompteLecteur()" class="btn btn-bleu" style="font-size:12px;padding:7px 14px">&#x2795; Nouveau</button>','</div>',(function(){  var c=getComptes();  var lects=c&&c.lecteurs?Object.values(c.lecteurs):[];   if(!lects.length) return '<div style="color:var(--grisC);text-align:center;padding:16px;font-size:12px">Aucun compte lecteur</div>';  return lects.map(function(l){    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:14px">'+l.nom+'</div><div style="color:var(--grisC);font-size:11px">ID : <b style="color:var(--bleu);font-family:monospace">'+l.id+'</b></div></div><button onclick="supprimerCompteLecteur(\''+l.id+'\')" class="btn btn-danger" style="font-size:11px;padding:6px 10px">&#x1F5D1;</button></div>';  }).join('');})(),'</div>','<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="color:var(--vert);font-weight:800;font-size:14px">&#x1F465; Comptes Comité ('+(comptes.comite||[]).length+')</div><button onclick="ajouterCompteComite()" class="btn btn-primary" style="font-size:12px;padding:7px 14px">&#x2795; Nouveau</button></div>',comptesHTML,'</div>',
 '<div class="card" style="border-color:rgba(255,179,71,0.2)"><div style="color:var(--or);font-weight:800;font-size:14px;margin-bottom:14px">&#x1F4B0; Montants de cotisation</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+montantsHTML+'</div><div style="display:flex;gap:8px;margin-bottom:6px"><input id="admin-montant-input" type="number" min="100" step="500" placeholder="Ex: 25000" style="flex:1"/><button class="btn btn-or" onclick="ajouterMontantAdmin()" style="padding:10px 16px">&#x2795;</button></div><div id="admin-montant-err" style="display:none;color:var(--rouge);font-size:12px;margin-bottom:10px"></div></div>',
 '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="color:var(--or);font-weight:800;font-size:14px">&#x1F4CB; Journal</div><button onclick="effacerJournal()" class="btn btn-ghost" style="font-size:11px;padding:6px 12px">&#x1F5D1; Effacer</button></div>',journalHTML,'</div>'].join('');}
+
+async function ajouterCompteLecteur(){
+  var nom=prompt('Nom du lecteur :');
+  if(!nom||!nom.trim()) return;
+  var id=prompt('Identifiant (sans espaces) - Ex: pasteur.dupont :');
+  if(!id||id.indexOf(' ')>=0){notifier('⚠ Identifiant invalide','danger');return;}
+  var idClean=id.trim().toLowerCase().replace(/\./g,'-');
+  var mdp=prompt('Mot de passe (min 4 car.) :');
+  if(!mdp||mdp.length<4){notifier('⚠ MDP trop court','danger');return;}
+  var h=await sha256(mdp);
+  await firebase.database().ref('assemblee-royale-data/comptes/lecteurs/'+idClean).set({id:idClean,nom:nom.trim(),hash:h});
+  var comptes=getComptes()||{admin:{hash:'',nom:'Admin'},comite:[],lecteurs:{}};
+  if(!comptes.lecteurs) comptes.lecteurs={};
+  comptes.lecteurs[idClean]={id:idClean,nom:nom.trim(),hash:h};
+  sauvegarderComptesLocal(comptes);
+  journaliser('LECTEUR CRÉÉ',nom+' ('+idClean+')');
+  notifier('✅ Lecteur '+nom+' créé');
+  afficherVue();
+}
+
+function supprimerCompteLecteur(id){
+  var comptes=getComptes();
+  var lects=comptes&&comptes.lecteurs?comptes.lecteurs:{};
+  var compte=lects[id];
+  if(!compte) return;
+  if(!confirm('Supprimer le lecteur '+compte.nom+' ?')) return;
+  firebase.database().ref('assemblee-royale-data/comptes/lecteurs/'+id).remove();
+  delete lects[id];
+  sauvegarderComptesLocal(comptes);
+  notifier('🗑 Lecteur supprimé','danger');
+  afficherVue();
+}
 
 async function ajouterCompteComite(){
   var nom=prompt('Nom :');
@@ -3029,9 +3275,13 @@ if('serviceWorker' in navigator) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btn-role-comite').addEventListener('click', function(){ choisirRole('comite'); });
-  document.getElementById('btn-role-admin').addEventListener('click',  function(){ choisirRole('admin'); });
+  document.getElementById('btn-role-comite').addEventListener('click',   function(){ choisirRole('comite'); });
+  document.getElementById('btn-role-lecteur').addEventListener('click', function(){ choisirRole('lecteur'); });
+  document.getElementById('btn-role-admin').addEventListener('click',   function(){ choisirRole('admin'); });
   document.getElementById('btn-connexion').addEventListener('click', tentativeConnexion);
+  document.getElementById('btn-lecteur-connexion').addEventListener('click', tentativeConnexionLecteur);
+  document.getElementById('login-lecteur-user').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('login-lecteur-pass').focus(); });
+  document.getElementById('login-lecteur-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') tentativeConnexionLecteur(); });
   document.getElementById('btn-admin-connexion').addEventListener('click', tentativeConnexionAdmin);
   document.getElementById('login-user').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('login-pass').focus(); });
   document.getElementById('login-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') tentativeConnexion(); });
