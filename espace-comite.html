@@ -2383,8 +2383,22 @@ function importerCSV(input) {
         var workbook = XLSX.read(data, {type:'array'});
         var sheetName = workbook.SheetNames[0];
         var sheet = workbook.Sheets[sheetName];
-        // Convertir en CSV
-        var csv = XLSX.utils.sheet_to_csv(sheet, {FS:';'});
+        // Lire toutes les lignes en tableau brut
+        var rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+        // Trouver la ligne d'en-tête : celle qui contient 'Nom' ou 'nom'
+        var headerIdx = 0;
+        for(var r=0; r<Math.min(rows.length,5); r++){
+          var rowStr = rows[r].join(';').toLowerCase();
+          if(rowStr.includes('nom') || rowStr.includes('name') || rowStr.includes('membre')){
+            headerIdx = r;
+            break;
+          }
+        }
+        // Construire CSV à partir de la ligne d'en-tête trouvée
+        var csvRows = rows.slice(headerIdx).map(function(row){
+          return row.map(function(c){ return '"'+String(c).replace(/"/g,'').replace(/\n/g,' ')+'"'; }).join(';');
+        });
+        var csv = csvRows.join('\n');
         traiterCSV(csv);
       } catch(err) {
         notifier('&#x26A0; Erreur lecture Excel : '+err.message, 'danger');
