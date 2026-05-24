@@ -1998,76 +1998,38 @@ function genCarteHTML(m){
 // CARTE FORMAT PVC (85.6 x 54mm — format CB)
 // ══════════════════════════════════════════════════
 function genCartePVCHTML(m){
-  var s = statutMembre(m);
-  var strip = {
-    ajour:  'linear-gradient(90deg,#0d5c3a,#4eff9b)',
-    retard: 'linear-gradient(90deg,#5c3a0d,#ffb347)',
-    inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'
-  };
-  var logoHTML = LOGO_DATA
-    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;vertical-align:middle"/>'
-    : '<span style="font-size:14px">&#x26EA;</span>';
-
-  // QR code grand format via API
-  var qrText = 'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant;
-  var qrUrl  = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='
-    + encodeURIComponent(qrText)+'&format=png&margin=2&color=0a1628&bgcolor=ffffff';
-
-  // Dimensions carte PVC en CSS : 85.6mm x 54mm
-  return '<div class="carte-pvc" style="'
-    +'width:85.6mm;height:54mm;'
-    +'background:linear-gradient(135deg,#0a1628,#0f2030);'
-    +'border-radius:4mm;overflow:hidden;'
-    +'font-family:Arial,sans-serif;'
-    +'display:inline-block;margin:3mm;'
-    +'page-break-inside:avoid;'
-    +'position:relative;'
-    +'box-shadow:0 2px 8px rgba(0,0,0,0.4);'
-    +'">'
-
-    // Bande colorée haut
-    +'<div style="height:4px;background:'+strip[s]+';"></div>'
-
-    // Contenu principal
-    +'<div style="display:flex;height:calc(54mm - 4px);padding:3mm;">'
-
-      // Colonne gauche : infos membre
-      +'<div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding-right:2mm;">'
-
-        // Header : logo + nom eglise
-        +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:2mm;">'
-          +logoHTML
-          +'<div style="overflow:hidden;">'
-            +'<div style="font-size:5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CFG.nom_eglise+'</div>'
-            +'<div style="font-size:4.5px;color:#556677;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+CFG.nom_projet+'</div>'
+  var s=statutMembre(m);
+  var logoHTML=LOGO_DATA
+    ?'<img src="'+LOGO_DATA+'" style="width:20px;height:20px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
+    :'<div style="width:20px;height:20px;border-radius:3px;background:#eaf0fb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;">&#x26EA;</div>';
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=75x75&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=1&color=0a1628&bgcolor=ffffff';
+  var badgeFn=m.fonction?'<span style="display:inline-block;background:#e8f0fe;border:1px solid #1565C0;color:#1565C0;border-radius:2px;padding:1px 4px;font-size:6px;font-weight:700;margin-right:2px;">'+m.fonction+'</span>':'';
+  var badgeDept=m.departement?'<span style="display:inline-block;background:#fff8e1;border:1px solid #b8860b;color:#b8860b;border-radius:2px;padding:1px 4px;font-size:6px;font-weight:700;">'+m.departement+'</span>':'';
+  return '<div style="width:85.6mm;height:54mm;background:#ffffff;border:2px solid #6366f1;border-radius:3px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;display:inline-block;vertical-align:top;">'
+    +'<div style="height:4px;background:linear-gradient(90deg,#6366f1,#818cf8);"></div>'
+    +'<div style="padding:4px 5px;height:calc(54mm - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">'
+        +'<div style="flex:1;min-width:0;">'
+          +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">'
+            +logoHTML
+            +'<div>'
+              +'<div style="font-size:5.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.1;">'+CFG.nom_eglise+'</div>'
+              +'<div style="font-size:5px;color:#999;">'+CFG.nom_projet+'</div>'
+            +'</div>'
           +'</div>'
+          +'<div style="font-weight:900;font-size:9px;color:#0a1628;line-height:1.2;margin-bottom:2px;">'+m.nom+'</div>'
+          +'<div style="font-size:8px;color:#1565C0;font-weight:700;font-family:monospace;">'+m.id+'</div>'
+          +'<div style="font-size:7px;color:#555;margin-top:1px;">Cotisation : <b style="color:#b8860b;">'+fmt(m.montant)+' F/mois</b></div>'
+          +(m.tel?'<div style="font-size:6.5px;color:#777;margin-top:1px;">'+m.tel+'</div>':'')
+          +((badgeFn||badgeDept)?'<div style="margin-top:2px;">'+badgeFn+badgeDept+'</div>':'')
         +'</div>'
-
-        // Nom membre
-        +'<div style="font-size:9px;font-weight:900;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44mm;">'+m.nom+'</div>'
-
-        // ID membre
-        +'<div style="font-size:8px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;letter-spacing:0.5px;margin-top:1mm;">'+m.id+'</div>'
-
-        // Cotisation + statut
-        +'<div style="display:flex;gap:3mm;margin-top:1mm;align-items:center;">'
-          +'<div style="font-size:7px;color:#ffb347;font-weight:700;">'+fmt(m.montant)+'/mois</div>'
-          +'<div style="font-size:6px;padding:1px 4px;border-radius:2px;font-weight:700;background:'+(s==='ajour'?'#0d5c3a':s==='retard'?'#5c3a0d':'#5c0d0d')+';color:'+(s==='ajour'?'#4eff9b':s==='retard'?'#ffb347':'#ff6b6b')+';white-space:nowrap;">'+(s==='ajour'?'A JOUR':s==='retard'?'RETARD':'INACTIF')+'</div>'
+        +'<div style="background:#f5f5f5;padding:2px;border-radius:3px;border:1px solid #ddd;flex-shrink:0;">'
+          +'<img src="'+qrUrl+'" width="75" height="75" style="display:block;" alt="QR '+m.id+'"/>'
         +'</div>'
-
-        // Tel si disponible
-        +(m.tel ? '<div style="font-size:6px;color:#556677;margin-top:1mm;">'+m.tel+'</div>' : '')
-
       +'</div>'
-
-      // Colonne droite : QR code grand format
-      +'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;">'
-        +'<div style="background:#ffffff;padding:2px;border-radius:3px;">'
-          +'<img src="'+qrUrl+'" width="110" height="110" style="display:block;" alt="QR '+m.id+'"/>'
-        +'</div>'
-        +'<div style="font-size:5px;color:#8899aa;margin-top:1mm;font-family:Courier New;text-align:center;">'+m.id+'</div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e8e8ff;padding-top:2px;">'
+        +'<div style="font-size:6px;color:#aaa;">'+TOUS_MOIS()[0]+' – '+TOUS_MOIS()[CFG.nb_mois-1]+'</div>'
       +'</div>'
-
     +'</div>'
   +'</div>';
 }
