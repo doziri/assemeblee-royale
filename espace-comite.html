@@ -2096,6 +2096,829 @@ function imprimerCartesPVC(liste){
   setTimeout(function(){window.print();},2000);
 }
 
+function imprimerCartePVC(id) {
+  var m = MEMBRES.find(function(x){ return x.id===id; });
+  if (!m) return;
+  imprimerCartesPVC([m]);
+}
+
+function imprimerToutesCartesPVC() {
+  if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
+  imprimerCartesPVC(MEMBRES);
+}
+
+
+// ══════════════════════════════════════════════════
+// CARTES FORMAT PVC (85.6 x 54mm — carte de crédit)
+// ══════════════════════════════════════════════════
+function genCartePVCHTML(m) {
+  var s = statutMembre(m);
+  var MC = MOIS_COURANT();
+  var payes = m.paiements.filter(function(p){ return p && p!==0; }).length;
+  var strip = {
+    ajour:  'linear-gradient(135deg,#0d5c3a,#4eff9b)',
+    retard: 'linear-gradient(135deg,#5c3a0d,#ffb347)',
+    inactif:'linear-gradient(135deg,#5c0d0d,#ff6b6b)'
+  };
+  var logoHTML = LOGO_DATA
+    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
+    : '<div style="width:22px;height:22px;border-radius:3px;background:#1a3a5a;flex-shrink:0"></div>';
+
+  // QR code grand format pour carte PVC
+  var qrText = 'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant;
+  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data='+encodeURIComponent(qrText)+'&format=png&margin=2&bgcolor=ffffff&color=0a1628';
+
+  // Carte PVC : 85.6mm x 54mm = 323px x 204px à 96dpi
+  return [
+    '<div style="width:323px;height:204px;background:linear-gradient(135deg,#0a1628,#0f2030);',
+    'border-radius:10px;overflow:hidden;font-family:Arial,sans-serif;',
+    'display:inline-block;margin:4mm;vertical-align:top;page-break-inside:avoid;',
+    'box-shadow:0 2px 8px rgba(0,0,0,0.4);position:relative;">',
+
+      // Bande couleur statut en haut
+      '<div style="height:4px;background:'+strip[s]+'"></div>',
+
+      '<div style="padding:8px 10px;height:calc(100% - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">',
+
+        // HEADER : logo + nom église + QR
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">',
+          '<div style="flex:1;min-width:0;">',
+            '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">',
+              logoHTML,
+              '<div style="font-size:5.5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.2;">'+
+                (CFG.nom_eglise||'ARR')+'</div>',
+            '</div>',
+            // Nom membre
+            '<div style="font-weight:900;font-size:11px;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">'+m.nom+'</div>',
+            // Code membre en monospace
+            '<div style="font-size:9px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;margin-top:2px;">'+m.id+'</div>',
+          '</div>',
+          // QR CODE GRAND FORMAT
+          '<div style="background:#ffffff;padding:3px;border-radius:5px;flex-shrink:0;">',
+            '<img src="'+qrUrl+'" width="80" height="80" style="display:block;" alt="QR"/>',
+          '</div>',
+        '</div>',
+
+        // FOOTER : cotisation + statut
+        '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #1a3a5a;padding-top:5px;">',
+          '<div>',
+            '<div style="font-size:7px;color:#556677;text-transform:uppercase;font-weight:700;">Cotisation</div>',
+            '<div style="font-size:9px;color:#64d4ff;font-weight:700;">'+fmt(m.montant)+'/mois</div>',
+          '</div>',
+          '<div style="text-align:center;">',
+            '<div style="font-size:7px;color:#556677;text-transform:uppercase;font-weight:700;">Mois payes</div>',
+            '<div style="font-size:9px;color:#4eff9b;font-weight:700;">'+payes+'/'+CFG.nb_mois+'</div>',
+          '</div>',
+          '<div>',
+            badgeHTML(s),
+          '</div>',
+        '</div>',
+
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
+
+function imprimerToutesCartesPVC() {
+  if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
+  imprimerCartesPVC(MEMBRES);
+}
+
+function imprimerCartesPVC(liste) {
+  var zone = document.getElementById('print-zone');
+  // Styles spéciaux pour format PVC
+  zone.innerHTML = [
+    '<style>',
+    '@media print {',
+    '  @page { size: A4; margin: 10mm; }',
+    '  body { background: white !important; }',
+    '  #print-zone { display: block !important; }',
+    '  .pvc-grid { display: flex; flex-wrap: wrap; gap: 4mm; justify-content: flex-start; }',
+    '  .pvc-card { page-break-inside: avoid; }',
+    '}',
+    '</style>',
+    '<div style="padding:5mm;">',
+    '<div style="font-family:Arial;font-size:10px;color:#333;margin-bottom:6mm;border-bottom:1px solid #ccc;padding-bottom:3mm;">',
+    '<strong>'+CFG.nom_eglise+'</strong> — Cartes Membres Format PVC — '+liste.length+' carte(s) — '+new Date().toLocaleDateString('fr-FR'),
+    '</div>',
+    '<div class="pvc-grid">',
+    liste.map(function(m){ return '<div class="pvc-card">'+genCartePVCHTML(m)+'</div>'; }).join(''),
+    '</div>',
+    '</div>'
+  ].join('');
+
+  // Attendre que les QR se chargent (images externes)
+  setTimeout(function(){ window.print(); }, 2000);
+}
+// ══════════════════════════════════════════════════
+
+function imprimerCarte(id){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;imprimerCartes([m]);}
+function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun membre','danger');return;}imprimerCartes(MEMBRES);}
+function imprimerCartes(liste){
+  var zone=document.getElementById('print-zone');
+
+  function coinsDecoupe(){
+    var sz='7mm', ep='0.5px', col='#888', off='2.5mm';
+    function coin(vt,vl,rot){
+      return '<div style="position:absolute;'+vt+';'+vl+';width:'+sz+';height:'+sz+';transform:rotate('+rot+'deg);pointer-events:none;">'
+        +'<div style="position:absolute;top:0;left:0;width:'+ep+';height:'+sz+';background:'+col+';"></div>'
+        +'<div style="position:absolute;top:0;left:0;width:'+sz+';height:'+ep+';background:'+col+';"></div>'
+        +'</div>';
+    }
+    return coin('top:-'+off,'left:-'+off,'0')
+          +coin('top:-'+off,'right:-'+off,'90')
+          +coin('bottom:-'+off,'right:-'+off,'180')
+          +coin('bottom:-'+off,'left:-'+off,'270');
+  }
+
+  var style=[
+    '<style>',
+    '@media print{',
+    '  @page{size:A4 portrait;margin:8mm;}',
+    '  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
+    '  .page-cartes{',
+    '    display:flex;',
+    '    flex-direction:column;',
+    '    align-items:center;',
+    '    gap:8mm;',
+    '    height:281mm;',       /* 297 - 2x8mm marges */
+    '    page-break-after:always;',
+    '    page-break-inside:avoid;',
+    '    box-sizing:border-box;',
+    '    justify-content:flex-start;',
+    '    padding-top:2mm;',
+    '  }',
+    '  .page-cartes:last-child{page-break-after:auto;}',
+    '  .carte-wrap{position:relative;page-break-inside:avoid;}',
+    '}',
+    '.page-cartes{',
+    '  display:flex;flex-direction:column;align-items:center;',
+    '  gap:8mm;padding:5mm;',
+    '}',
+    '.carte-wrap{',
+    '  position:relative;',
+    '  outline:1px dashed #bbbbbb;',
+    '  outline-offset:2mm;',
+    '}',
+    '</style>'
+  ].join('');
+
+  // Grouper par 3 cartes par page
+  var pages = [];
+  for(var i=0; i<liste.length; i+=3){
+    pages.push(liste.slice(i, i+3));
+  }
+
+  var pagesHTML = pages.map(function(groupe){
+    var cartesHTML = groupe.map(function(m){
+      return '<div class="carte-wrap">'+coinsDecoupe()+genCarteHTML(m)+'</div>';
+    }).join('');
+    return '<div class="page-cartes">'+cartesHTML+'</div>';
+  }).join('');
+
+  zone.innerHTML = style + pagesHTML;
+  setTimeout(function(){window.print();}, 1500);
+}
+
+
+// SAUVEGARDE
+function vueSauvegarde(){var aJour=MEMBRES.filter(function(m){return statutMembre(m)==='ajour';}).length;var verse=MEMBRES.reduce(function(s,m){return s+m.paiements.filter(function(p,i){return p&&p!==0;}).length*m.montant;},0);var attendu=MEMBRES.reduce(function(s,m){return s+m.montant*(MOIS_COURANT()+1);},0);return['<div class="card"><div style="color:var(--vert);font-weight:800;font-size:15px;margin-bottom:14px">&#x1F4BE; Sauvegarde & Synchronisation</div>','<div style="background:linear-gradient(135deg,#0a1e14,#0d2a1a);border:1px solid rgba(78,255,155,0.2);border-radius:12px;padding:14px;margin-bottom:14px"><div style="color:var(--vert);font-weight:700;font-size:13px;margin-bottom:8px">☁ Synchronisation Cloud (JSONBin)</div><div style="color:var(--grisC);font-size:12px;margin-bottom:10px">Données synchronisées sur tous vos appareils automatiquement.</div><button class="btn btn-primary" style="font-size:12px;padding:9px" onclick="chargerDepuisCloud().then(function(){afficherVue();notifier(\'&#x2705; Données rechargées !\');})">&#x1F504; Forcer la synchronisation</button></div>','<div style="background:#111d2a;border-radius:10px;padding:14px;margin-bottom:14px">',[['Membres',MEMBRES.length,'var(--bleu)'],['À jour',aJour,'var(--vert)'],['Encaissé',fmt(verse),'var(--vert)'],['Taux',attendu>0?Math.round(verse/attendu*100)+'%':'–','var(--bleu)']].map(function(x){return'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="color:var(--grisC);font-size:13px">'+x[0]+'</span><span style="color:'+x[2]+';font-weight:700">'+x[1]+'</span></div>';}).join(''),'</div>','<div style="display:flex;flex-direction:column;gap:10px"><button class="btn btn-primary btn-full" onclick="exporterJSON()" '+(MEMBRES.length?'':'disabled')+'>&#x1F4BE; Exporter en JSON</button><button class="btn btn-bleu btn-full" onclick="exporterCSV()" '+(MEMBRES.length?'':'disabled')+'>&#x1F4CA; Exporter en CSV</button><button class="btn btn-ghost btn-full" onclick="document.getElementById(\'import-file\').click()">&#x1F4C2; Importer depuis JSON</button><button class=\"btn btn-vert btn-full\" onclick=\"document.getElementById(&quot;import-excel-file&quot;).click()\">&#x1F4CA; Importer depuis Excel/CSV</button><input type=\"file\" id=\"import-excel-file\" accept=\".xlsx,.csv,.xls\" style=\"display:none\" onchange=\"importerCSV(this)\"/><button class="btn btn-or btn-full" onclick="exporterPourMembres()">&#x1F4E4; Exporter pour l\'espace membres</button><input id="import-file" type="file" accept=".json" style="display:none"/></div></div>','<div class="card"><div style="color:var(--rouge);font-weight:800;font-size:13px;margin-bottom:12px">&#x1F5D1; Zone dangereuse</div><button class="btn btn-danger btn-full" onclick="effacerTout()" '+(MEMBRES.length?'':'disabled')+'>&#x26A0; Effacer tous les membres</button></div>'].join('');}
+function exporterJSON(){var blob=new Blob([JSON.stringify(MEMBRES,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='membres_'+CFG.nom_eglise.replace(/\s/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.json';a.click();}
+function exporterCSV(){var hdr='Code,Nom,Montant,Telephone,Fonction,Departement,Mois_Payes,Total_Verse,Solde_Du,Statut';var rows=MEMBRES.map(function(m){var p=m.paiements.filter(function(x,i){return x&&i<=MOIS_COURANT();}).length;var mq=m.paiements.filter(function(x,i){return !x&&i<=MOIS_COURANT();}).length;return m.id+',"'+m.nom+'",'+m.montant+',"'+(m.tel||'')+'","'+(m.fonction||'')+'","'+(m.departement||'')+'",'+p+','+p*m.montant+','+mq*m.montant+','+statutMembre(m);});var blob=new Blob(['\uFEFF'+[hdr].concat(rows).join('\n')],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='membres_'+new Date().toISOString().slice(0,10)+'.csv';a.click();}
+function importerJSON(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var data=JSON.parse(e.target.result);if(!Array.isArray(data))throw new Error('Format invalide');var nb=CFG.nb_mois;MEMBRES=data.filter(function(m){return m.id&&m.nom&&m.montant&&Array.isArray(m.paiements);}).map(function(m){var p=m.paiements;if(p.length<nb)return Object.assign({},m,{paiements:p.concat(Array(nb-p.length).fill(0))});if(p.length>nb)return Object.assign({},m,{paiements:p.slice(0,nb)});return m;});sauvegarder();sauvegarderCloud();notifier('&#x2714; '+MEMBRES.length+' membres importés');changerVue('membres');}catch(err){notifier('&#x26A0; Erreur : '+err.message,'danger');}};reader.readAsText(file);input.value='';}
+function effacerTout(){
+  // Réservé à l'Admin uniquement
+  if(ROLE_ACTUEL !== 'admin'){
+    notifier('&#x26A0; Cette action est réservée à l\'administrateur uniquement','danger');
+    return;
+  }
+  // Modale de confirmation renforcée
+  var modalHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center" id="modal-effacer">'
+    + '<div style="background:#1a0505;border:2px solid #c0392b;border-radius:16px;padding:28px;max-width:420px;width:90%">'
+    + '<div style="font-size:32px;text-align:center;margin-bottom:10px">&#x26A0;</div>'
+    + '<div style="font-weight:800;font-size:16px;color:#ff6b6b;text-align:center;margin-bottom:8px">ACTION IRRÉVERSIBLE</div>'
+    + '<div style="font-size:12px;color:#ffaaaa;text-align:center;margin-bottom:20px">'
+    + 'Vous êtes sur le point d\'effacer les <strong>'+MEMBRES.length+' membres</strong> et tous leurs paiements.<br/><br/>'
+    + 'Cette action est <strong>irréversible</strong>. Assurez-vous d\'avoir exporté les données en JSON avant de continuer.'
+    + '</div>'
+    + '<div style="background:#111;border-radius:8px;padding:12px;margin-bottom:16px">'
+    + '<div style="font-size:11px;color:#ff6b6b;font-weight:700;margin-bottom:6px">Tapez CONFIRMER pour valider :</div>'
+    + '<input id="effacer-confirm-text" type="text" placeholder="CONFIRMER" style="width:100%;padding:10px;background:#1a0a0a;color:#fff;border:1px solid #c0392b;border-radius:6px;font-size:14px;box-sizing:border-box"/>'
+    + '</div>'
+    + '<div style="background:#111;border-radius:8px;padding:12px;margin-bottom:20px">'
+    + '<div style="font-size:11px;color:#ff6b6b;font-weight:700;margin-bottom:6px">Mot de passe administrateur :</div>'
+    + '<input id="effacer-mdp" type="password" placeholder="Mot de passe admin" style="width:100%;padding:10px;background:#1a0a0a;color:#fff;border:1px solid #c0392b;border-radius:6px;font-size:14px;box-sizing:border-box"/>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px">'
+    + '<button class="btn btn-danger" style="flex:1;padding:12px" onclick="validerEffacement()">&#x1F5D1; Effacer définitivement</button>'
+    + '<button class="btn btn-ghost" style="flex:1;padding:12px" onclick="document.getElementById(&quot;modal-effacer&quot;).remove()">Annuler</button>'
+    + '</div>'
+    + '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  setTimeout(function(){ document.getElementById('effacer-confirm-text').focus(); }, 100);
+}
+
+async function validerEffacement(){
+  var texte = document.getElementById('effacer-confirm-text').value.trim();
+  var mdp = document.getElementById('effacer-mdp').value;
+  if(texte !== 'CONFIRMER'){
+    notifier('&#x26A0; Tapez exactement CONFIRMER pour valider','danger');
+    return;
+  }
+  // Vérifier le MDP admin
+  var comptes = getComptes();
+  var hash = await sha256(mdp);
+  if(!comptes || !comptes.admin || comptes.admin.hash !== hash){
+    notifier('&#x26A0; Mot de passe administrateur incorrect','danger');
+    return;
+  }
+  // Sauvegarder d'abord un backup automatique
+  var backupKey = 'temple_backup_' + new Date().toISOString().slice(0,10);
+  try { localStorage.setItem(backupKey, JSON.stringify(MEMBRES)); } catch(e){}
+  
+  document.getElementById('modal-effacer').remove();
+  MEMBRES = [];
+  CODES_SUPPRIMES = [];
+  try { localStorage.removeItem('temple_codes_supprimes'); } catch(e){}
+  sauvegarder();
+  sauvegarderCloud();
+  journaliser('EFFACEMENT TOTAL', 'Tous les membres effacés par ' + (COMPTE_ACTUEL ? COMPTE_ACTUEL.nom : 'Admin'));
+  notifier('&#x26A0; Tous les membres ont été effacés — backup local sauvegardé','danger');
+  changerVue('membres');
+}
+function exporterPourMembres(){var d={cfg:CFG,membres:MEMBRES.map(function(m){return{id:m.id,nom:m.nom,montant:m.montant,paiements:m.paiements};}),export_date:new Date().toISOString()};var blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='donnees_membres.json';a.click();notifier('&#x2705; Exporté !');}
+
+// PARAMÈTRES
+function vueParametres(){var mc=CFG.mois_courant_mois,ma=CFG.mois_courant_annee,md=CFG.mois_debut,ad=CFG.annee_debut,nb=CFG.nb_mois;return['<div class="form-card"><div style="color:var(--vert);font-weight:900;font-size:16px;margin-bottom:18px">&#x2699; Paramètres du projet</div>','<div class="field"><label>Nom de l\'Église</label><input id="p-nom-eglise" type="text" value="'+CFG.nom_eglise+'"/></div>','<div class="field"><label>Nom du projet</label><input id="p-nom-projet" type="text" value="'+CFG.nom_projet+'"/></div>','<div class="sep"></div>','<div class="field"><label>Durée totale</label><div style="display:flex;gap:8px;flex-wrap:wrap">'+[12,24,36,48,60].map(function(n){return'<button onclick="selDuree('+n+')" id="duree-'+n+'" class="btn '+(n===DUREE_SELECTIONNEE?'btn-primary':'btn-ghost')+'" style="padding:8px 12px;font-size:12px">'+n+' mois</button>';}).join('')+'</div></div>','<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"><div><label>Mois début</label><select id="p-mois-debut">'+MOIS_LONGS.map(function(m,i){return'<option value="'+i+'"'+(i===md?' selected':'')+'>'+m+'</option>';}).join('')+'</select></div><div><label>Année début</label><select id="p-annee-debut">'+Array.from({length:10},function(_,i){return 2020+i;}).map(function(a){return'<option value="'+a+'"'+(a===ad?' selected':'')+'>'+a+'</option>';}).join('')+'</select></div></div>','<div style="background:#111d2a;border:1px solid var(--orD);border-radius:10px;padding:14px;margin-bottom:14px"><div style="color:var(--or);font-size:12px;margin-bottom:12px">&#x1F5D3; Mois en cours</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label>Mois courant</label><select id="p-mois-courant">'+MOIS_LONGS.map(function(m,i){return'<option value="'+i+'"'+(i===mc?' selected':'')+'>'+m+'</option>';}).join('')+'</select></div><div><label>Année courante</label><select id="p-annee-courante">'+Array.from({length:10},function(_,i){return 2020+i;}).map(function(a){return'<option value="'+a+'"'+(a===ma?' selected':'')+'>'+a+'</option>';}).join('')+'</select></div></div><div id="mois-courant-idx-label" style="color:var(--grisC);font-size:11px;margin-top:8px">'+calculerLabelMoisCourant(md,ad,mc,ma,nb)+'</div></div>','<div id="p-erreur" style="display:none;background:var(--rougeD);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:8px 12px;color:var(--rouge);font-size:12px;margin-bottom:12px"></div>','<button class="btn btn-primary btn-full" style="padding:14px" onclick="sauvegarderParametres()">&#x2705; Enregistrer</button>','</div>','<div class="card" style="margin-top:14px"><div style="color:var(--bleu);font-weight:800;font-size:14px;margin-bottom:10px">&#x1F4F1; Installer l\'application</div><div style="color:var(--grisC);font-size:12px;margin-bottom:12px">Installez l\'app sur votre écran d\'accueil pour un accès rapide sans navigateur.</div><button id="btn-install-pwa" class="btn btn-bleu btn-full" onclick="installerPWA()" style="display:none">&#x2B07; Installer sur cet appareil</button><div id="pwa-status" style="color:var(--grisT);font-size:11px;text-align:center">Pour installer: Menu du navigateur → Ajouter à l\'écran d\'accueil</div></div>'].join('');}
+function calculerLabelMoisCourant(md,ad,mc,ma,nb){var base=ad*12+md,cur=ma*12+mc,idx=cur-base;if(idx<0)return'<span style="color:var(--rouge)">&#x26A0; Avant le début</span>';if(idx>=nb)return'<span style="color:var(--rouge)">&#x26A0; Après la fin</span>';return'Mois <b style="color:var(--or)">'+(idx+1)+'</b> sur '+nb;}
+function selDuree(n){DUREE_SELECTIONNEE=n;[12,24,36,48,60].forEach(function(x){var el=document.getElementById('duree-'+x);if(el){el.className='btn '+(x===n?'btn-primary':'btn-ghost');el.style.cssText='padding:8px 12px;font-size:12px';}});majLabelCourant();}
+function majLabelCourant(){var md=parseInt(document.getElementById('p-mois-debut').value);var ad=parseInt(document.getElementById('p-annee-debut').value);var mc=parseInt(document.getElementById('p-mois-courant').value);var ma=parseInt(document.getElementById('p-annee-courante').value);var el=document.getElementById('mois-courant-idx-label');if(el)el.innerHTML=calculerLabelMoisCourant(md,ad,mc,ma,DUREE_SELECTIONNEE||CFG.nb_mois);}
+function sauvegarderParametres(){var nom_eglise=document.getElementById('p-nom-eglise').value.trim()||CFG.nom_eglise;var nom_projet=document.getElementById('p-nom-projet').value.trim()||CFG.nom_projet;var mois_debut=parseInt(document.getElementById('p-mois-debut').value);var annee_debut=parseInt(document.getElementById('p-annee-debut').value);var nb_mois=DUREE_SELECTIONNEE||CFG.nb_mois;var mois_courant_mois=parseInt(document.getElementById('p-mois-courant').value);var mois_courant_annee=parseInt(document.getElementById('p-annee-courante').value);var errEl=document.getElementById('p-erreur');var base=annee_debut*12+mois_debut,cur=mois_courant_annee*12+mois_courant_mois,idx=cur-base;if(idx<0){errEl.textContent='&#x26A0; Le mois en cours est avant la date de début.';errEl.style.display='block';return;}if(idx>=nb_mois){errEl.textContent='&#x26A0; Le mois en cours est après la fin du projet.';errEl.style.display='block';return;}errEl.style.display='none';if(nb_mois!==CFG.nb_mois){MEMBRES=MEMBRES.map(function(m){var p=m.paiements;if(p.length<nb_mois)return Object.assign({},m,{paiements:p.concat(Array(nb_mois-p.length).fill(0))});if(p.length>nb_mois)return Object.assign({},m,{paiements:p.slice(0,nb_mois)});return m;});sauvegarder();}CFG={nom_eglise:nom_eglise,nom_projet:nom_projet,mois_debut:mois_debut,annee_debut:annee_debut,nb_mois:nb_mois,mois_courant_mois:mois_courant_mois,mois_courant_annee:mois_courant_annee};sauvegarderConfig();DUREE_SELECTIONNEE=nb_mois;sauvegarderCloud();notifier('&#x2705; Paramètres enregistrés !');afficherVue();}
+
+// ADMIN
+function vueAdmin(){if(ROLE_ACTUEL!=='admin')return'<div style="text-align:center;padding:60px 20px"><div style="font-size:48px">&#x26D4;</div><div style="color:var(--rouge);font-weight:700;margin-top:16px">Accès réservé à l\'administrateur</div></div>';var comptes=getComptes()||{admin:{nom:'Admin'},comite:[]};var journal=JSON.parse(localStorage.getItem('temple_journal')||'[]');var comptesHTML=!(comptes.comite||[]).length?'<div style="color:var(--grisC);text-align:center;padding:20px;font-size:13px">Aucun compte comité</div>':(comptes.comite||[]).map(function(c){return'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:14px">'+c.nom+'</div><div style="color:var(--grisC);font-size:11px">ID : <b style="color:var(--bleu);font-family:monospace">'+c.id+'</b></div></div><div style="display:flex;gap:8px"><button onclick="reinitMdpComite(\''+c.id+'\')" class="btn btn-ghost" style="font-size:11px;padding:6px 10px">&#x1F512;</button><button onclick="supprimerCompteComite(\''+c.id+'\')" class="btn btn-danger" style="font-size:11px;padding:6px 10px">&#x1F5D1;</button></div></div>';}).join('');var montantsHTML=MONTANTS.map(function(m){return'<div style="display:inline-flex;align-items:center;gap:6px;background:var(--orD);border:1px solid rgba(255,179,71,0.3);border-radius:8px;padding:6px 12px"><span style="color:var(--or);font-weight:700;font-size:13px">'+fmt(m)+'</span><button onclick="supprimerMontant('+m+')" style="background:none;border:none;color:rgba(255,107,107,0.8);cursor:pointer;font-size:16px;line-height:1;padding:0">&times;</button></div>';}).join('');var journalHTML=!journal.length?'<div style="color:var(--grisC);text-align:center;padding:16px;font-size:13px">Aucune action</div>':'<div style="max-height:300px;overflow-y:auto">'+journal.slice(0,50).map(function(e){return'<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:'+(e.role==='admin'?'var(--bleu)':'var(--vert)')+';font-size:11px;font-weight:700">'+e.par+'</span><span style="color:var(--grisT);font-size:10px">'+e.date+'</span></div><div style="color:var(--grisC);font-size:12px">'+e.action+' – '+e.detail+'</div></div>';}).join('')+'</div>';
+return['<div style="background:linear-gradient(135deg,#0a1628,#0d1e3a);border:1px solid rgba(100,212,255,0.2);border-radius:14px;padding:18px;margin-bottom:14px"><div style="color:var(--bleu);font-weight:900;font-size:17px;margin-bottom:4px">&#x1F6E1; Panneau Administrateur</div><div style="color:var(--grisC);font-size:12px">Connecté : <b style="color:var(--bleu)">'+COMPTE_ACTUEL.nom+'</b></div></div>',
+'<div class="card" style="border-color:rgba(78,255,155,0.15)"><div style="color:var(--vert);font-weight:800;font-size:14px;margin-bottom:14px">&#x1F5BC; Logo</div><div style="display:flex;gap:16px;align-items:center;margin-bottom:14px">',LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:72px;height:72px;border-radius:12px;object-fit:cover"/>':'<div style="width:72px;height:72px;border-radius:12px;background:#111d2a;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:32px">⛪</div>','<div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="btn-upload-logo" class="btn btn-primary" style="font-size:12px;padding:8px 14px">&#x1F4C1; Choisir</button>',LOGO_DATA?'<button id="btn-suppr-logo" class="btn btn-danger" style="font-size:12px;padding:8px 14px">&#x1F5D1; Supprimer</button>':'',' </div></div></div></div>',
+'<div class="card" style="border-color:rgba(100,212,255,0.2)"><div style="color:var(--bleu);font-weight:800;font-size:14px;margin-bottom:14px">&#x1F6E1; Compte Admin</div><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0"><div><div style="font-weight:600">'+comptes.admin.nom+'</div></div><button onclick="changerMdpAdmin()" class="btn btn-bleu" style="font-size:11px;padding:6px 12px">&#x1F512; Changer MDP</button></div></div>',
+'<div class="card" style="margin-bottom:14px;border-color:rgba(100,212,255,0.15)">','<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">','<div style="color:var(--bleu);font-weight:800;font-size:14px">&#x1F441; Comptes Lecteurs ('+(function(){ var c=getComptes(); var l=c&&c.lecteurs?c.lecteurs:{}; return Object.keys(l).length; }())+')</div>','<button onclick="ajouterCompteLecteur()" class="btn btn-bleu" style="font-size:12px;padding:7px 14px">&#x2795; Nouveau</button>','</div>',(function(){  var c=getComptes();  var lects=c&&c.lecteurs?Object.values(c.lecteurs):[];   if(!lects.length) return '<div style="color:var(--grisC);text-align:center;padding:16px;font-size:12px">Aucun compte lecteur</div>';  return lects.map(function(l){    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div><div style="font-weight:600;font-size:14px">'+l.nom+'</div><div style="color:var(--grisC);font-size:11px">ID : <b style="color:var(--bleu);font-family:monospace">'+l.id+'</b></div></div><button onclick="supprimerCompteLecteur(\''+l.id+'\')" class="btn btn-danger" style="font-size:11px;padding:6px 10px">&#x1F5D1;</button></div>';  }).join('');})(),'</div>','<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="color:var(--vert);font-weight:800;font-size:14px">&#x1F465; Comptes Comité ('+(comptes.comite||[]).length+')</div><button onclick="ajouterCompteComite()" class="btn btn-primary" style="font-size:12px;padding:7px 14px">&#x2795; Nouveau</button></div>',comptesHTML,'</div>',
+'<div class="card" style="border-color:rgba(255,179,71,0.2)"><div style="color:var(--or);font-weight:800;font-size:14px;margin-bottom:14px">&#x1F4B0; Montants de cotisation</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+montantsHTML+'</div><div style="display:flex;gap:8px;margin-bottom:6px"><input id="admin-montant-input" type="number" min="100" step="500" placeholder="Ex: 25000" style="flex:1"/><button class="btn btn-or" onclick="ajouterMontantAdmin()" style="padding:10px 16px">&#x2795;</button></div><div id="admin-montant-err" style="display:none;color:var(--rouge);font-size:12px;margin-bottom:10px"></div></div>',
+'<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="color:var(--or);font-weight:800;font-size:14px">&#x1F4CB; Journal</div><button onclick="effacerJournal()" class="btn btn-ghost" style="font-size:11px;padding:6px 12px">&#x1F5D1; Effacer</button></div>',journalHTML,'</div>'].join('');}
+
+async function ajouterCompteLecteur(){
+  var nom=prompt('Nom du lecteur :');
+  if(!nom||!nom.trim()) return;
+  var id=prompt('Identifiant (sans espaces) - Ex: pasteur.dupont :');
+  if(!id||id.indexOf(' ')>=0){notifier('⚠ Identifiant invalide','danger');return;}
+  var idClean=id.trim().toLowerCase().replace(/\./g,'-');
+  var mdp=prompt('Mot de passe (min 4 car.) :');
+  if(!mdp||mdp.length<4){notifier('⚠ MDP trop court','danger');return;}
+  var h=await sha256(mdp);
+  await firebase.database().ref('assemblee-royale-data/comptes/lecteurs/'+idClean).set({id:idClean,nom:nom.trim(),hash:h});
+  var comptes=getComptes()||{admin:{hash:'',nom:'Admin'},comite:[],lecteurs:{}};
+  if(!comptes.lecteurs) comptes.lecteurs={};
+  comptes.lecteurs[idClean]={id:idClean,nom:nom.trim(),hash:h};
+  sauvegarderComptesLocal(comptes);
+  journaliser('LECTEUR CRÉÉ',nom+' ('+idClean+')');
+  notifier('✅ Lecteur '+nom+' créé');
+  afficherVue();
+}
+
+function supprimerCompteLecteur(id){
+  var comptes=getComptes();
+  var lects=comptes&&comptes.lecteurs?comptes.lecteurs:{};
+  var compte=lects[id];
+  if(!compte) return;
+  if(!confirm('Supprimer le lecteur '+compte.nom+' ?')) return;
+  firebase.database().ref('assemblee-royale-data/comptes/lecteurs/'+id).remove();
+  delete lects[id];
+  sauvegarderComptesLocal(comptes);
+  notifier('🗑 Lecteur supprimé','danger');
+  afficherVue();
+}
+
+async function ajouterCompteComite(){
+  var nom=prompt('Nom :');
+  if(!nom||!nom.trim())return;
+  var id=prompt('Identifiant (sans espaces ni points) - Ex: herve-lobe ou hervelobe :');
+  if(!id||id.indexOf(' ')>=0){notifier('&#x26A0; Identifiant invalide','danger');return;}
+  var idClean=id.trim().toLowerCase()
+    .replace(/\./g,'-')
+    .replace(/#/g,'-')
+    .replace(/\$/g,'-')
+    .replace(/\[/g,'-')
+    .replace(/\]/g,'-');
+  var mdp=prompt('Mot de passe (min 4 car.) :');
+  if(!mdp||mdp.length<4){notifier('&#x26A0; MDP trop court','danger');return;}
+  var h=await sha256(mdp);
+  // Sauvegarder directement dans Firebase par ID (évite le problème de tableau)
+  await firebase.database().ref('assemblee-royale-data/comptes/comite/'+idClean).set({
+    id:idClean, nom:nom.trim(), hash:h
+  });
+  // Mettre à jour localement
+  var comptes=getComptes()||{admin:{hash:'',nom:'Admin'},comite:[]};
+  if(!Array.isArray(comptes.comite)) comptes.comite=Object.values(comptes.comite||{});
+  if(comptes.comite.find(function(c){return c.id===idClean;})){
+    notifier('&#x26A0; ID deja utilise','danger');return;
+  }
+  comptes.comite.push({id:idClean,nom:nom.trim(),hash:h});
+  sauvegarderComptesLocal(comptes);
+  journaliser('COMPTE CREE',nom+' ('+idClean+')');
+  notifier('&#x2705; '+nom+' cree');
+  afficherVue();
+}
+
+async function reinitMdpComite(id){
+  var comptes=getComptes();
+  var compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===id;});
+  if(!compte)return;
+  var mdp=prompt('Nouveau MDP pour '+compte.nom+' :');
+  if(!mdp||mdp.length<4){notifier('&#x26A0; MDP trop court','danger');return;}
+  var h=await sha256(mdp);
+  // Mettre à jour directement dans Firebase
+  await firebase.database().ref('assemblee-royale-data/comptes/comite/'+id+'/hash').set(h);
+  compte.hash=h;
+  sauvegarderComptesLocal(comptes);
+  journaliser('MDP MODIFIE',compte.nom);
+  notifier('&#x2705; MDP mis a jour');
+}
+
+function supprimerCompteComite(id){
+  var comptes=getComptes();
+  var compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===id;});
+  if(!compte)return;
+  if(!confirm('Supprimer '+compte.nom+' ?'))return;
+  // Supprimer directement dans Firebase
+  firebase.database().ref('assemblee-royale-data/comptes/comite/'+id).remove();
+  comptes.comite=comptes.comite.filter(function(c){return c.id!==id;});
+  sauvegarderComptesLocal(comptes);
+  notifier('&#x1F5D1; '+compte.nom+' supprime','danger');
+  afficherVue();
+}
+
+async function changerMdpAdmin(){
+  var actuel=prompt('MDP admin actuel :');
+  if(!actuel)return;
+  var comptes=getComptes()||await initCompteParDefaut();
+  if(await sha256(actuel)!==comptes.admin.hash){notifier('&#x26A0; MDP incorrect','danger');return;}
+  var nouveau=prompt('Nouveau MDP (min 6 car.) :');
+  if(!nouveau||nouveau.length<6){notifier('&#x26A0; Trop court','danger');return;}
+  if(prompt('Confirmer :')!==nouveau){notifier('&#x26A0; Ne correspond pas','danger');return;}
+  var h=await sha256(nouveau);
+  // Sauvegarder directement dans Firebase
+  await firebase.database().ref('assemblee-royale-data/comptes/admin/hash').set(h);
+  comptes.admin.hash=h;
+  sauvegarderComptesLocal(comptes);
+  notifier('&#x2705; MDP admin mis a jour sur tous les appareils !');
+}
+
+async function changerMdpPropre(){
+  if(ROLE_ACTUEL==='admin'){changerMdpAdmin();return;}
+  var actuel=prompt('Votre MDP actuel :');
+  if(!actuel)return;
+  var comptes=getComptes();
+  var compte=(comptes&&comptes.comite||[]).find(function(c){return c.id===(COMPTE_ACTUEL&&COMPTE_ACTUEL.id);});
+  if(!compte||await sha256(actuel)!==compte.hash){notifier('&#x26A0; MDP incorrect','danger');return;}
+  var nouveau=prompt('Nouveau MDP (min 4) :');
+  if(!nouveau||nouveau.length<4){notifier('&#x26A0; Trop court','danger');return;}
+  if(prompt('Confirmer :')!==nouveau){notifier('&#x26A0; Ne correspond pas','danger');return;}
+  var h=await sha256(nouveau);
+  // Sauvegarder directement dans Firebase
+  await firebase.database().ref('assemblee-royale-data/comptes/comite/'+compte.id+'/hash').set(h);
+  compte.hash=h;
+  sauvegarderComptesLocal(comptes);
+  notifier('&#x2705; MDP mis a jour sur tous les appareils !');
+}
+
+function effacerJournal(){if(!confirm('Effacer le journal ?'))return;localStorage.removeItem('temple_journal');notifier('Journal effacé');afficherVue();}
+function ajouterMontantAdmin(){var input=document.getElementById('admin-montant-input');var errEl=document.getElementById('admin-montant-err');var val=parseInt(input?input.value:0);if(!val||val<100){if(errEl){errEl.textContent='&#x26A0; Montant invalide';errEl.style.display='block';}return;}if(MONTANTS.indexOf(val)>=0){if(errEl){errEl.textContent='&#x26A0; Ce montant existe déjà';errEl.style.display='block';}return;}if(errEl)errEl.style.display='none';MONTANTS.push(val);MONTANTS.sort(function(a,b){return a-b;});sauvegarderMontants();sauvegarderCloud();if(input)input.value='';notifier('&#x2705; '+fmt(val)+' ajouté');afficherVue();}
+function supprimerMontant(m){if(MONTANTS.length<=1){notifier('&#x26A0; Gardez au moins un montant','danger');return;}MONTANTS=MONTANTS.filter(function(x){return x!==m;});sauvegarderMontants();sauvegarderCloud();notifier('&#x1F5D1; '+fmt(m)+' retiré','danger');afficherVue();}
+
+// INIT
+
+// ══════════════════════════════════════════════════
+// RAPPELS WHATSAPP
+// ══════════════════════════════════════════════════
+function genererRappelsWhatsApp() {
+  var MC = MOIS_COURANT();
+  var membresRetard = MEMBRES.filter(function(m){
+    return statutMembre(m) !== 'ajour' && m.tel;
+  });
+  var membersSansTel = MEMBRES.filter(function(m){
+    return statutMembre(m) !== 'ajour' && !m.tel;
+  });
+
+  if (!membresRetard.length && !membersSansTel.length) {
+    notifier('&#x2705; Tous les membres sont a jour !');
+    return;
+  }
+
+  VUE_ACTUELLE = 'rappels';
+  afficherVue();
+}
+
+function vueRappels() {
+  var MC = MOIS_COURANT();
+  var membresRetard = MEMBRES.filter(function(m){ return statutMembre(m) !== 'ajour'; });
+  var avecTel = membresRetard.filter(function(m){ return m.tel; });
+  var sansTel = membresRetard.filter(function(m){ return !m.tel; });
+
+  var lignes = avecTel.map(function(m) {
+    var retards = m.paiements.filter(function(p,i){ return !p && i<=MC; }).length;
+    var dette = retards * m.montant;
+    var moisListe = m.paiements.map(function(p,i){ return (!p&&i<=MC)?TOUS_MOIS()[i]:null; }).filter(Boolean).join(', ');
+        var msg = 'RAPPEL COTISATION - ' + CFG.nom_eglise + '\n\nBonjour ' + m.nom + ',\n\nVous avez ' + retards + ' mois de cotisation en retard pour le projet ' + CFG.nom_projet + '.\n\nMontant du : ' + fmt(dette) + '\nMois concernes : ' + moisListe + '\n\nMerci de regulariser votre situation.\n\nQue Dieu benisse votre engagement !';
+
+    var tel = m.tel.replace(/\D/g,'');
+    var waUrl = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(msg);
+    var msgEncoded = encodeURIComponent(msg);
+
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'
+        + '<div>'
+          + '<div style="font-weight:700;font-size:14px">' + m.nom + '</div>'
+          + '<div style="color:var(--grisC);font-size:11px;margin-top:2px">' + m.id + (m.tel?' · '+m.tel:'') + '</div>'
+          + '<div style="color:var(--rouge);font-size:12px;margin-top:4px">' + retards + ' mois en retard · ' + fmt(dette) + '</div>'
+        + '</div>'
+        + badgeHTML(statutMembre(m))
+      + '</div>'
+      + '<div style="background:#0d1e14;border:1px solid #1a3a1a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#aaccaa;font-family:monospace;white-space:pre-wrap;max-height:120px;overflow-y:auto">' + msg.replace(/</g,'&lt;') + '</div>'
+      + '<div style="display:flex;gap:8px">'
+        + '<a href="' + waUrl + '" target="_blank" class="btn btn-primary" style="flex:1;text-decoration:none;font-size:12px">&#x1F4F2; Envoyer sur WhatsApp</a>'
+        + '<button onclick="copierRappel(this, decodeHelper_' + m.id.replace(/-/g,'') + ')" class="btn btn-ghost" style="font-size:12px;padding:8px 12px">&#x1F4CB; Copier</button>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+
+  var sansTelHtml = sansTel.length ? '<div class="card" style="border-color:rgba(255,107,107,0.3);margin-bottom:14px">'
+    + '<div style="color:var(--rouge);font-weight:800;font-size:13px;margin-bottom:10px">&#x26A0; Membres sans WhatsApp (' + sansTel.length + ')</div>'
+    + sansTel.map(function(m){
+        var retards = m.paiements.filter(function(p,i){return !p&&i<=MC;}).length;
+        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'
+          + '<div><div style="font-weight:600">' + m.nom + '</div><div style="color:var(--grisC);font-size:11px">' + m.id + '</div></div>'
+          + '<div style="color:var(--rouge);font-weight:700">' + retards + ' mois · ' + fmt(retards*m.montant) + '</div>'
+        + '</div>';
+      }).join('')
+    + '</div>' : '';
+
+  var envoyerTousBtn = avecTel.length > 1 ? '<div class="card" style="margin-bottom:14px">'
+    + '<div style="color:var(--grisC);font-size:12px;margin-bottom:10px">Envoyer un rappel a tous les membres en retard avec WhatsApp</div>'
+    + '<button onclick="envoyerTousRappels()" class="btn btn-primary btn-full">&#x1F4E2; Envoyer a tous (' + avecTel.length + ')</button>'
+    + '</div>' : '';
+
+  return [
+    '<button class="btn btn-ghost" style="margin-bottom:14px;font-size:12px" onclick="changerVue(&apos;membres&apos;)">&#x2039; Retour</button>',
+    '<div class="card-bleu" style="margin-bottom:14px">',
+      '<div style="color:var(--bleu);font-weight:800;font-size:15px;margin-bottom:4px">&#x1F514; Rappels WhatsApp</div>',
+      '<div style="color:var(--grisC);font-size:12px">' + membresRetard.length + ' membre(s) en retard · ' + avecTel.length + ' avec WhatsApp</div>',
+    '</div>',
+    envoyerTousBtn,
+    sansTelHtml,
+    avecTel.length ? '<div style="color:var(--or);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MEMBRES A RELANCER (' + avecTel.length + ')</div>' : '',
+    lignes || '<div class="empty-state"><div style="font-size:48px">&#x1F4F2;</div><div style="margin-top:16px;font-weight:700;color:var(--vert)">Tous les membres avec WhatsApp sont a jour !</div></div>',
+  ].join('');
+}
+
+function copierRappel(btn, msg) {
+  if(!msg) return;
+  try { navigator.clipboard.writeText(msg); } catch(e) {}
+  btn.innerHTML = '&#x2714; Copie !';
+  setTimeout(function(){ btn.innerHTML = '&#x1F4CB; Copier'; }, 2000);
+}
+
+function envoyerTousRappels() {
+  var MC = MOIS_COURANT();
+  var avecTel = MEMBRES.filter(function(m){ return statutMembre(m)!=='ajour' && m.tel; });
+  if(!avecTel.length) return;
+  // Ouvrir WhatsApp pour le premier, puis les suivants
+  avecTel.forEach(function(m, i) {
+    var retards = m.paiements.filter(function(p,idx){ return !p&&idx<=MC; }).length;
+    var dette = retards*m.montant;
+    var msg = 'Bonjour '+m.nom+', vous avez '+retards+' mois de cotisation en retard pour '+CFG.nom_projet+'. Montant dû : '+fmt(dette)+'. Merci de régulariser. &#x1F64F;';
+    var url = 'https://wa.me/'+m.tel.replace(/\D/g,'')+'?text='+encodeURIComponent(msg);
+    setTimeout(function(){ window.open(url, '_blank'); }, i*1000);
+  });
+  notifier('&#x1F4E2; '+avecTel.length+' rappels envoyés !');
+}
+
+// ══════════════════════════════════════════════════
+// IMPORT EXCEL/CSV
+// ══════════════════════════════════════════════════
+function importerCSV(input) {
+  var file = input.files[0];
+  if(!file) return;
+
+  var ext = file.name.split('.').pop().toLowerCase();
+
+  if(ext === 'xlsx' || ext === 'xls') {
+    // Lire avec SheetJS
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = new Uint8Array(e.target.result);
+        var workbook = XLSX.read(data, {type:'array'});
+        var sheetName = workbook.SheetNames[0];
+        var sheet = workbook.Sheets[sheetName];
+        // Lire toutes les lignes en tableau brut
+        var rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+        // Trouver la ligne d'en-tête : celle qui contient 'Nom' ou 'nom'
+        var headerIdx = -1;
+        for(var r=0; r<Math.min(rows.length,10); r++){
+          var cells = rows[r].map(function(c){ return String(c).trim().toLowerCase().replace(/[^a-z]/g,''); });
+          if(cells.some(function(c){ return c==='nom'||c==='name'||c==='membre'||c==='prenom'; })){
+            headerIdx = r;
+            break;
+          }
+        }
+        if(headerIdx < 0){
+          notifier('&#x26A0; En-tête Nom introuvable. Colonnes ligne 1: '+rows[0].join(', '),'danger');
+          return;
+        }
+        // Construire CSV à partir de la ligne d'en-tête trouvée
+        var csvRows = rows.slice(headerIdx).map(function(row){
+          return row.map(function(c){ return '"'+String(c).replace(/"/g,'').replace(/\n/g,' ')+'"'; }).join(';');
+        });
+        var csv = csvRows.join('\n');
+        traiterCSV(csv);
+      } catch(err) {
+        notifier('&#x26A0; Erreur lecture Excel : '+err.message, 'danger');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // Lire comme texte (CSV)
+    var reader2 = new FileReader();
+    reader2.onload = function(e) { traiterCSV(e.target.result); };
+    reader2.readAsText(file, 'UTF-8');
+  }
+  input.value = '';
+}
+
+function traiterCSV(text) {
+  // Détecter séparateur
+  var sep = '\t';
+  if(text.indexOf(';') >= 0 && text.indexOf(';') < (text.indexOf(',') < 0 ? 9999 : text.indexOf(','))) sep = ';';
+  else if(text.indexOf(',') >= 0) sep = ',';
+
+  var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+  if(lines.length < 2) { notifier('&#x26A0; Fichier vide ou invalide','danger'); return; }
+
+  function normalize(s){ return String(s).trim().toLowerCase().replace(/["*]/g,'').replace(/[éèêë]/g,'e').replace(/[àâä]/g,'a').replace(/[ùûü]/g,'u').replace(/[îï]/g,'i').replace(/[ôö]/g,'o').trim(); }
+  var headers = lines[0].split(sep).map(normalize);
+
+  var colNom        = headers.findIndex(function(h){ return h==='nom'||h==='name'||h==='membre'||h==='prenom'||h.startsWith('nom')||h.startsWith('name'); });
+  var colMontant    = headers.findIndex(function(h){ return h.includes('montant') || h.includes('amount') || h.includes('cotis') || h.includes('tarif') || h.includes('mensuel'); });
+  var colTel        = headers.findIndex(function(h){ return h.includes('tel') || h.includes('phone') || h.includes('mobile') || h.includes('contact') || h.includes('numero'); });
+  var colFonction   = headers.findIndex(function(h){ return h.includes('fonction') || h.includes('titre') || h.includes('role') || h.includes('poste'); });
+  var colDepartement= headers.findIndex(function(h){ return h.includes('departement') || h.includes('dept') || h.includes('service') || h.includes('groupe'); });
+
+  if(colNom < 0) {
+    notifier('&#x26A0; Colonne Nom introuvable. Colonnes détectées : '+headers.join(', '),'danger');
+    return;
+  }
+
+  var apercu = [];
+  var aIgnorer = [];
+
+  lines.slice(1).forEach(function(line) {
+    var cols = line.split(sep).map(function(c){ return c.trim().replace(/^"|"$/g,''); });
+    var nom = cols[colNom] ? cols[colNom].trim() : '';
+    if(!nom) return;
+    var montant = colMontant >= 0 ? (parseInt(cols[colMontant]) || CFG.montant_defaut || 2000) : (CFG.montant_defaut || 2000);
+    var tel = colTel >= 0 ? (cols[colTel] || '') : '';
+    // Normaliser le numéro : ajouter +225 si commence par 0 ou 07
+    if(tel){
+      tel = String(tel).trim().replace(/\s/g,'');
+      if(tel.match(/^0[0-9]{9}$/)) tel = '+225' + tel.substring(1);
+      else if(tel.match(/^[0-9]{8}$/)) tel = '+225 0' + tel;
+    }
+    var fct = colFonction >= 0 ? (cols[colFonction] || '') : '';
+    var dept = colDepartement >= 0 ? (cols[colDepartement] || '') : '';
+    var dejaExiste = MEMBRES.some(function(m){ return m.nom.toLowerCase() === nom.toLowerCase(); });
+    if(dejaExiste) { aIgnorer.push(nom); return; }
+    apercu.push({ nom:nom, montant:montant, tel:tel, fonction:fct, departement:dept });
+  });
+
+  if(!apercu.length) {
+    notifier('&#x26A0; Aucun nouveau membre à importer ('+aIgnorer.length+' déjà existants ignorés)','danger');
+    return;
+  }
+
+  var lignesApercu = apercu.slice(0,10).map(function(a){
+    return '<tr><td style="padding:4px 8px;border-bottom:1px solid #1a3a5a">'+a.nom+'</td>'
+         + '<td style="padding:4px 8px;border-bottom:1px solid #1a3a5a;color:var(--or)">'+fmt(a.montant)+' F/mois</td>'
+         + '<td style="padding:4px 8px;border-bottom:1px solid #1a3a5a;color:var(--grisC)">'+(a.tel||'—')+'</td>'
+         + '<td style="padding:4px 8px;border-bottom:1px solid #1a3a5a;color:var(--bleu)">'+(a.fonction||'—')+'</td>'
+         + '<td style="padding:4px 8px;border-bottom:1px solid #1a3a5a;color:var(--or)">'+(a.departement||'—')+'</td></tr>';
+  }).join('');
+
+  var plusHTML = apercu.length > 10 ? '<tr><td colspan="5" style="padding:6px 8px;color:var(--grisC);font-style:italic">... et '+(apercu.length-10)+' autres membres</td></tr>' : '';
+  var sansTelCount = apercu.filter(function(a){ return !a.tel; }).length;
+  var sansTelHTML = sansTelCount ? '<div style="color:#ff8888;font-size:11px;margin-top:6px">&#x26A0; '+sansTelCount+' membre(s) sans numéro</div>' : '';
+  var ignoresHTML = aIgnorer.length ? '<div style="color:var(--or);font-size:11px;margin-top:8px">&#x26A0; '+aIgnorer.length+' membre(s) ignoré(s) car déjà existant(s)</div>' : '';
+
+  IMPORT_APERCU_COURANT = apercu;
+  var modalHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center" id="modal-import">'
+    + '<div style="background:#0a1628;border:1px solid var(--or);border-radius:16px;padding:24px;max-width:600px;width:92%;max-height:80vh;overflow-y:auto">'
+    + '<div style="font-weight:800;font-size:15px;color:var(--or);margin-bottom:12px">&#x1F4CB; Aperçu — '+apercu.length+' nouveau(x) membre(s)</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr>'
+    + '<th style="text-align:left;padding:4px 8px;color:var(--grisC);font-size:10px">Nom</th>'
+    + '<th style="text-align:left;padding:4px 8px;color:var(--grisC);font-size:10px">Cotisation</th>'
+    + '<th style="text-align:left;padding:4px 8px;color:var(--grisC);font-size:10px">Téléphone</th>'
+    + '<th style="text-align:left;padding:4px 8px;color:var(--grisC);font-size:10px">Fonction</th>'
+    + '<th style="text-align:left;padding:4px 8px;color:var(--grisC);font-size:10px">Département</th>'
+    + '</tr></thead><tbody>'+lignesApercu+plusHTML+'</tbody></table>'
+    + ignoresHTML + sansTelHTML
+    + '<div style="display:flex;gap:10px;margin-top:16px">'
+    + '<button class="btn btn-primary" style="flex:1" onclick="confirmerImportCSV()">&#x2705; Importer '+apercu.length+' membre(s)</button>'
+    + '<button class="btn btn-ghost" style="flex:1" onclick="document.getElementById(&quot;modal-import&quot;).remove()">Annuler</button>'
+    + '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+
+var IMPORT_APERCU_COURANT = [];
+function confirmerImportCSV() {
+  var apercu = IMPORT_APERCU_COURANT;
+  document.getElementById('modal-import') && document.getElementById('modal-import').remove();
+  var importes = 0;
+  apercu.forEach(function(a) {
+    // Vérifier une dernière fois qu'il n'existe pas
+    if(MEMBRES.some(function(m){ return m.nom.toLowerCase() === a.nom.toLowerCase(); })) return;
+    var maxIdImp=MEMBRES.reduce(function(max,m){var n=parseInt(m.id.replace('MBR-',''))||0;return n>max?n:max;},0);
+    var id = genId(maxIdImp + 1);
+    // IMPORTANT : paiements tous à zéro — les paiements sont manuels
+    MEMBRES.push({
+      id: id,
+      nom: a.nom,
+      montant: a.montant,
+      tel: a.tel || '',
+      fonction: a.fonction || '',
+      departement: a.departement || '',
+      paiements: Array(CFG.nb_mois).fill(0)
+    });
+    importes++;
+  });
+  sauvegarder();
+  sauvegarderCloud();
+  notifier('&#x2705; ' + importes + ' membre(s) importé(s) avec succès — paiements à zéro');
+  changerVue('membres');
+}
+
+// ══════════════════════════════════════════════════
+// PRÉVISION ENCAISSEMENTS
+// ══════════════════════════════════════════════════
+function calculerPrevisions() {
+  var MC = MOIS_COURANT();
+  var tousMois = TOUS_MOIS();
+
+  // Taux moyen de collecte par mois (basé sur l'historique)
+  var tauxHistorique = [];
+  for(var i=0; i<=MC; i++) {
+    var nb = MEMBRES.filter(function(m){ return m.paiements[i]; }).length;
+    tauxHistorique.push(MEMBRES.length > 0 ? nb/MEMBRES.length : 0);
+  }
+  var tauxMoyen = tauxHistorique.length > 0
+    ? tauxHistorique.reduce(function(s,t){return s+t;},0)/tauxHistorique.length
+    : 0.7;
+
+  // Prévisions pour les 6 prochains mois
+  var previsions = [];
+  for(var j=MC+1; j<Math.min(MC+7, CFG.nb_mois); j++) {
+    var montantMoyen = MEMBRES.reduce(function(s,m){return s+m.montant;},0)/MEMBRES.length||0;
+    var prevu = Math.round(MEMBRES.length * tauxMoyen * montantMoyen);
+    var optimiste = Math.round(MEMBRES.length * Math.min(tauxMoyen*1.2,1) * montantMoyen);
+    var pessimiste = Math.round(MEMBRES.length * tauxMoyen*0.8 * montantMoyen);
+    previsions.push({label:tousMois[j], prevu:prevu, optimiste:optimiste, pessimiste:pessimiste});
+  }
+  return previsions;
+}
+
+// ══════════════════════════════════════════════════
+// HISTORIQUE CONNEXIONS
+// ══════════════════════════════════════════════════
+function vueHistoriqueConnexions() {
+  var journal = JSON.parse(localStorage.getItem('temple_journal')||'[]');
+  var connexions = journal.filter(function(e){
+    return e.action==='CONNEXION'||e.action==='DÉCONNEXION';
+  });
+
+  var lignes = connexions.slice(0,50).map(function(e) {
+    var ic = e.action==='CONNEXION' ? '&#x1F7E2;' : '&#x1F534;';
+    var c = e.action==='CONNEXION' ? 'var(--vert)' : 'var(--rouge)';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<span style="font-size:16px">'+ic+'</span>'
+        +'<div>'
+          +'<div style="font-weight:600;font-size:13px">'+e.par+'</div>'
+          +'<div style="color:var(--grisC);font-size:11px">'+e.detail+'</div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+        +'<div style="color:'+c+';font-size:11px;font-weight:700">'+e.action+'</div>'
+        +'<div style="color:var(--grisT);font-size:10px">'+e.date+'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+
+  return [
+    '<div class="card-bleu" style="margin-bottom:14px">',
+      '<div style="color:var(--bleu);font-weight:800;font-size:15px;margin-bottom:4px">&#x1F4DD; Historique des connexions</div>',
+      '<div style="color:var(--grisC);font-size:12px">'+connexions.length+' événements enregistrés</div>',
+    '</div>',
+    connexions.length
+      ? '<div class="card">'+lignes+'</div>'
+      : '<div class="empty-state"><div style="font-size:48px">&#x1F4DD;</div><div style="margin-top:16px">Aucune connexion enregistrée</div></div>',
+  ].join('');
+}
+
+// Enregistrer le Service Worker (PWA)
+var _deferredPWAPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredPWAPrompt = e;
+  var btn = document.getElementById('btn-install-pwa');
+  if(btn) { btn.style.display='flex'; }
+  var status = document.getElementById('pwa-status');
+  if(status) status.style.display='none';
+});
+window.addEventListener('appinstalled', function() {
+  notifier('&#x2705; Application installée avec succès !');
+  _deferredPWAPrompt = null;
+});
+function installerPWA() {
+  if(!_deferredPWAPrompt) { notifier('&#x26A0; Utilisez le menu du navigateur pour installer','danger'); return; }
+  _deferredPWAPrompt.prompt();
+  _deferredPWAPrompt.userChoice.then(function(result){
+    if(result.outcome==='accepted') notifier('&#x2705; Installation acceptée !');
+    _deferredPWAPrompt = null;
+  });
+}
+
+
+// ══ CARTES FORMAT PVC (85.6mm x 54mm — format carte bancaire) ══
+function genCartePVCHTML(m) {
+  var s = statutMembre(m);
+  var strip = {
+    ajour:   'linear-gradient(90deg,#0d5c3a,#4eff9b)',
+    retard:  'linear-gradient(90deg,#5c3a0d,#ffb347)',
+    inactif: 'linear-gradient(90deg,#5c0d0d,#ff6b6b)'
+  };
+  var logoHTML = LOGO_DATA
+    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
+    : '<div style="width:22px;height:22px;background:#1a3a5a;border-radius:3px;flex-shrink:0"></div>';
+
+  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&data='
+    + encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)
+    + '&format=png&margin=2&color=0a1628&bgcolor=ffffff';
+
+  return [
+    '<div style="width:85.6mm;height:54mm;background:linear-gradient(135deg,#0a1628,#0f2030);',
+    'border-radius:4px;overflow:hidden;font-family:Arial,sans-serif;',
+    'display:inline-block;margin:3mm;vertical-align:top;box-sizing:border-box;',
+    'page-break-inside:avoid;position:relative;">',
+
+      // Bande colorée haut
+      '<div style="height:4px;background:'+strip[s]+'"></div>',
+
+      '<div style="padding:5px 6px 4px 6px;height:calc(54mm - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">',
+
+        // LIGNE 1: Logo + Nom église + QR code
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">',
+          '<div style="flex:1;min-width:0;padding-right:4px;">',
+            '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">',
+              logoHTML,
+              '<div style="font-size:5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.2">'+CFG.nom_eglise+'</div>',
+            '</div>',
+            // Nom membre
+            '<div style="font-weight:900;font-size:8px;color:#ddeeff;line-height:1.2;margin-bottom:2px;word-break:break-word;">'+m.nom+'</div>',
+            // Code membre
+            '<div style="font-size:8px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;letter-spacing:.5px;">'+m.id+'</div>',
+          '</div>',
+          // QR CODE GRAND FORMAT
+          '<div style="background:#ffffff;padding:3px;border-radius:4px;flex-shrink:0;">',
+            '<img src="'+qrUrl+'" width="110" height="110"',
+            ' style="display:block;border-radius:2px;" alt="QR '+m.id+'"/>',
+          '</div>',
+        '</div>',
+
+        // LIGNE 2: Cotisation + Projet
+        '<div style="border-top:1px solid #1a3a5a;padding-top:3px;display:flex;justify-content:space-between;align-items:flex-end;">',
+          '<div>',
+            '<div style="font-size:5px;color:#556677;text-transform:uppercase;font-weight:700;">Cotisation mensuelle</div>',
+            '<div style="font-size:8px;color:#ffb347;font-weight:700;">'+fmt(m.montant)+' F/mois</div>',
+          '</div>',
+          '<div style="text-align:right;">',
+            '<div style="font-size:5px;color:#556677;">'+CFG.nom_projet+'</div>',
+            m.tel ? '<div style="font-size:5.5px;color:#445566;">'+m.tel+'</div>' : '',
+          '</div>',
+        '</div>',
+
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
 
 function imprimerToutesPVC() {
   if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
