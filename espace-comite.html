@@ -457,7 +457,13 @@ function supprimerLogo() {
 var ROLE_ACTUEL = null, COMPTE_ACTUEL = null;
 
 function getComptes() { try { var d=localStorage.getItem('temple_comptes'); if(d) return JSON.parse(d); } catch(e){} return null; }
-function sauvegarderComptesLocal(c) { localStorage.setItem('temple_comptes', JSON.stringify(c)); }
+function sauvegarderComptesLocal(c) {
+  // Normaliser comite et lecteurs : objet Firebase → tableau
+  var norm = Object.assign({}, c);
+  if(norm.comite && !Array.isArray(norm.comite)) norm.comite = Object.values(norm.comite);
+  if(norm.lecteurs && !Array.isArray(norm.lecteurs)) {} // garder objet pour lecteurs
+  localStorage.setItem('temple_comptes', JSON.stringify(norm));
+}
 
 async function initCompteParDefaut() {
   var c = {admin:{hash:await sha256('admin2024'),nom:'Administrateur'},comite:[{id:'comite1',nom:'Responsable 1',hash:await sha256('comite2024')}]};
@@ -509,7 +515,9 @@ async function tentativeConnexion() {
   if (!userId||!pass) { showLoginErr(errEl,'Identifiant et mot de passe requis'); return; }
   var comptes=getComptes()||await initCompteParDefaut();
   var h=await sha256(pass);
-  var compte=(comptes.comite||[]).find(function(c){ return c.id===userId&&c.hash===h; });
+  // Normaliser comite : peut être objet Firebase ou tableau
+  var comiteArr=Array.isArray(comptes.comite)?comptes.comite:Object.values(comptes.comite||{});
+  var compte=comiteArr.find(function(c){ return c.id===userId&&c.hash===h; });
   if (compte) {
     ROLE_ACTUEL='comite'; COMPTE_ACTUEL={id:compte.id,nom:compte.nom,role:'comite'};
     var remC = document.getElementById('remember-comite') && document.getElementById('remember-comite').checked;
