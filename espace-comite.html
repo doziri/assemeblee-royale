@@ -989,11 +989,7 @@ function togglePaiement(id,idx){
 // FORMULAIRE
 function ouvrirFormulaire(id){
   if(ROLE_ACTUEL==='lecteur'){notifier('&#x1F441; Accès lecture seule','danger');return;}
-  // Ajout d'un nouveau membre : réservé à l'Admin uniquement
-  if(!id && ROLE_ACTUEL !== 'admin'){
-    notifier('&#x26D4; L\'ajout de nouveaux membres est réservé à l\'administrateur.','danger');
-    return;
-  }
+  // Ajout et modification ouverts au Comité et Admin
   MEMBRE_EDIT_ID=id||null;
   if(id){var m=MEMBRES.find(function(x){return x.id===id;});if(m)FORM_MONTANT=m.montant;}
   else{FORM_MONTANT=2000;FORM_MOIS_DEBUT=0;}
