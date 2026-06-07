@@ -26,6 +26,11 @@ var db = firebase.database();
 <script>
 
 // ═══ FORMAT NUMÉRO WHATSAPP ═══
+function envoyerWAComite(tel1, tel2, msgEncode) {
+  if(tel1) window.open('https://wa.me/'+tel1+'?text='+msgEncode, '_blank');
+  if(tel2) setTimeout(function(){ window.open('https://wa.me/'+tel2+'?text='+msgEncode, '_blank'); }, 1500);
+}
+
 function formatWANumber(tel) {
   if (!tel) return '';
   // Supprimer tous les caractères non numériques sauf le +
@@ -677,7 +682,12 @@ function vueDossier() {
   var dernierPaiementStr = dernierMoisPaye>=0 ? TOUS_MOIS()[dernierMoisPaye] : 'Aucun';
 
   // WhatsApp
-  var waLink = mFrais.tel ? '<a href="https://wa.me/'+formatWANumber(mFrais.tel)+'" target="_blank" class="btn btn-vert" style="flex:1;text-decoration:none;font-size:12px;padding:10px">📲 WhatsApp comité</a>' : '';
+  var telComite  = (CFG && CFG.tel_comite)  ? CFG.tel_comite  : '';
+  var telComite2 = (CFG && CFG.tel_comite2) ? CFG.tel_comite2 : '';
+  var msgWA = 'Bonjour, je suis '+mFrais.nom+' ('+mFrais.id+'). Je souhaite avoir des informations sur ma cotisation.';
+  var waLink = (telComite||telComite2)
+    ? '<button onclick="envoyerWAComite(\''+formatWANumber(telComite)+'\',\''+formatWANumber(telComite2)+'\',\''+encodeURIComponent(msgWA)+'\')" class="btn btn-vert" style="flex:1;font-size:12px;padding:10px">📲 Contacter le comité</button>'
+    : '';
   // Lien Wave avec sélecteur de mois
   var nbMoisRestants = CFG.nb_mois - payes;
   var waveLink = '<div style="background:#0a1e14;border:1px solid rgba(78,255,155,0.2);border-radius:12px;padding:14px;margin-bottom:12px;">'
