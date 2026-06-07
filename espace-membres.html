@@ -632,7 +632,8 @@ function afficherVue() {
     mondossier: vueDossier,
     calendrier:  vueCalendrier,
     classement:  vueClassement,
-    macarte:     vueMaCarte
+    macarte:     vueMaCarte,
+    guide:       vueGuide
   };
   div.innerHTML = (map[VUE_ACTUELLE] || vueDossier)();
   c.appendChild(div);
