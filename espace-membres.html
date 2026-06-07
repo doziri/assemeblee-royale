@@ -676,6 +676,24 @@ function vueDossier() {
 
   // WhatsApp
   var waLink = mFrais.tel ? '<a href="https://wa.me/'+formatWANumber(mFrais.tel)+'" target="_blank" class="btn btn-vert" style="flex:1;text-decoration:none;font-size:12px;padding:10px">📲 WhatsApp comité</a>' : '';
+  // Lien Wave avec sélecteur de mois
+  var nbMoisRestants = CFG.nb_mois - payes;
+  var waveLink = '<div style="background:#0a1e14;border:1px solid rgba(78,255,155,0.2);border-radius:12px;padding:14px;margin-bottom:12px;">'
+    +'<div style="color:#4eff9b;font-weight:700;font-size:13px;margin-bottom:10px;">💚 Payer via Wave</div>'
+    +'<div style="color:var(--grisC);font-size:11px;margin-bottom:10px;">Cotisation : <b style="color:#ffb347;">'+fmt(mFrais.montant)+' F/mois</b></div>'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
+      +'<div style="color:var(--grisC);font-size:12px;">Nombre de mois :</div>'
+      +'<div style="display:flex;gap:6px;">'
+        +[1,2,3,6].map(function(n){
+          var amt = n * mFrais.montant;
+          var note = 'Cotisation+ARR+'+encodeURIComponent(mFrais.id)+'+'+(n>1?n+'mois':'1mois');
+          var waveUrl = 'https://pay.wave.com/m/M_ci_uohmJJN-l5G8/c/ci/?amount='+amt+'&note='+note;
+          return '<a href="'+waveUrl+'" target="_blank" style="display:inline-block;background:#0d5c3a;border:1px solid #4eff9b;color:#4eff9b;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;text-decoration:none;text-align:center;">'
+            +n+'<br/><span style="font-size:9px;">'+fmt(amt)+'</span></a>';
+        }).join('')
+      +'</div>'
+    +'</div>'
+    +'</div>';
 
   return [
     // PROFIL
@@ -735,6 +753,7 @@ function vueDossier() {
     '<div style="display:flex;gap:10px;flex-wrap:wrap">',
       '<button class="btn btn-bleu" style="flex:1;font-size:12px" onclick="changerVue(\'calendrier\')">📅 Voir calendrier</button>',
       '<button class="btn btn-ghost" style="flex:1;font-size:12px" onclick="changerVue(\'macarte\')">🪪 Ma carte QR</button>',
+      waveLink,
       waLink,
     '</div>'
   ].join('');
