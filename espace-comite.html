@@ -1212,6 +1212,17 @@ function vueStats() {
       '<div style="color:var(--grisC);font-size:12px">'+CFG.nom_eglise+' · '+CFG.nom_projet+'</div>',
     '</div>',
 
+    // MONTANT GLOBAL ATTENDU PAR MOIS
+    '<div class="card" style="margin-bottom:14px;border-color:rgba(201,162,39,0.3)">',
+      '<div style="display:flex;justify-content:space-between;align-items:center">',
+        '<div>',
+          '<div style="color:var(--or);font-weight:700;font-size:13px;margin-bottom:4px">💰 Montant global attendu par mois</div>',
+          '<div style="color:var(--grisC);font-size:11px">Si tous les '+MEMBRES.length+' membres paient leur cotisation</div>',
+        '</div>',
+        '<div style="font-size:22px;font-weight:900;color:var(--or)">'+fmt(MEMBRES.reduce(function(s,m){return s+m.montant;},0))+' F</div>',
+      '</div>',
+    '</div>',
+
     '<div class="grid-2" style="margin-bottom:14px">',
       [['Total encaissé', fmt(totalGlobal), 'var(--vert)', '#0a1e14'],
        ['Taux global', tauxGlobal+'%', 'var(--bleu)', '#0a1428'],
