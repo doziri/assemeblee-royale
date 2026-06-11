@@ -256,6 +256,16 @@ var syncTimer = null;
 var lastSyncTs = 0;
 var DB_REF = 'assemblee-royale-data';
 
+// Normalise un numéro pour WhatsApp : format international 225XXXXXXXXXX
+function waNum(tel) {
+  if (!tel) return '';
+  var num = String(tel).replace(/\D/g, '');
+  if (num.indexOf('225') === 0 && num.length >= 13) return num;
+  if (num.charAt(0) === '0' && num.length === 10) return '225' + num;
+  if (num.length === 9) return '2250' + num;
+  return num;
+}
+
 async function jsonbinGet() {
   return new Promise(function(resolve, reject) {
     db.ref(DB_REF).once('value')
