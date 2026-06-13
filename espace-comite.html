@@ -255,6 +255,7 @@ var SYNC_INTERVAL = 30000;
 var syncTimer = null;
 var lastSyncTs = 0;
 var DB_REF = 'assemblee-royale-data';
+var PAIEMENTS_ANNULES_RECENT = {}; // {'MBR-001:5': timestamp} - empêche la fusion de restaurer un paiement juste annulé
 
 // Normalise un numéro pour WhatsApp : format international 225XXXXXXXXXX
 function waNum(tel) {
@@ -408,7 +409,10 @@ async function _envoyerCloud(silencieux) {
             if (mc.paiements) {
               var pc = Array.isArray(mc.paiements) ? mc.paiements : Object.values(mc.paiements);
               for (var fi = 0; fi < pc.length; fi++) {
-                if (pc[fi] && (!ml.paiements[fi] || ml.paiements[fi] === 0)) {
+                var annKey = ml.id+':'+fi;
+                var annTs = PAIEMENTS_ANNULES_RECENT[annKey];
+                var recentAnnulation = annTs && (Date.now()-annTs) < 5*60*1000;
+                if (pc[fi] && (!ml.paiements[fi] || ml.paiements[fi] === 0) && !recentAnnulation) {
                   ml.paiements[fi] = pc[fi];
                 }
               }
@@ -1692,6 +1696,7 @@ function annulerPaiementMois(memberId, moisIdx){
   var mois=TOUS_MOIS()[moisIdx];
   if(!confirm('Annuler le paiement de '+m.nom+' pour '+mois+' ?\nLe montant '+fmt(m.montant)+' sera retire de son solde.')) return;
   m.paiements[moisIdx]=0;
+  PAIEMENTS_ANNULES_RECENT[m.id+':'+moisIdx]=Date.now();
   journaliser('PAIEMENT ANNULE', m.nom+' - '+mois);
   sauvegarderCloud();
   notifier('&#x274C; Paiement de '+mois+' annule pour '+m.nom,'danger');
