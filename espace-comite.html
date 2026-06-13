@@ -745,6 +745,20 @@ function vueScanner(){
     '</div>'
   ].join('') : '';
 
+  // MOIS DÉJÀ PAYÉS (annulables)
+  var moisPayes = m.paiements.map(function(p,i){return (p && p!==0)?i:-1;}).filter(function(i){return i>=0;});
+  var moisPayesHTML = moisPayes.length ? [
+    '<div class="card" style="margin-bottom:14px">',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MOIS DEJA PAYES (cliquer pour annuler)</div>',
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">',
+      moisPayes.map(function(idx){
+        return '<div onclick="annulerPaiementMois(\''+m.id+'\','+idx+')" style="padding:8px 12px;border-radius:8px;cursor:pointer;background:var(--vertD);border:1px solid var(--vert);display:flex;align-items:center;gap:6px;font-size:12px;color:var(--vert)">'
+          +'<span>'+TOUS_MOIS()[idx]+'</span><span style="font-size:14px">&#x2715;</span></div>';
+      }).join(''),
+      '</div>',
+    '</div>'
+  ].join('') : '';
+
   return [
     iosSection,
     '<div class="card">',
@@ -1677,6 +1691,19 @@ function ouvrirValidation(id){
   VUE_ACTUELLE='validation';
   afficherVue();
 }
+function annulerPaiementMois(memberId, moisIdx){
+  if(ROLE_ACTUEL==='lecteur'){notifier('&#x1F441; Acces lecture seule','danger');return;}
+  var m=MEMBRES.find(function(x){return x.id===memberId;});
+  if(!m) return;
+  var mois=TOUS_MOIS()[moisIdx];
+  if(!confirm('Annuler le paiement de '+m.nom+' pour '+mois+' ?\nLe montant '+fmt(m.montant)+' sera retire de son solde.')) return;
+  m.paiements[moisIdx]=0;
+  journaliser('PAIEMENT ANNULE', m.nom+' - '+mois);
+  sauvegarderCloud();
+  notifier('&#x274C; Paiement de '+mois+' annule pour '+m.nom,'danger');
+  afficherVue();
+}
+
 function vueValidation(){
   var m=MEMBRE_VALIDATION;
   if(!m)return'<div style="text-align:center;padding:40px;color:var(--grisC)">Aucun membre selectionne</div>';
@@ -1761,6 +1788,7 @@ function vueValidation(){
       '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px">'+moisDusHTML+'</div>',
       moisFutursHTML,
     '</div>',
+    moisPayesHTML,
 
     // MONTANT
     '<div class="card" style="margin-bottom:14px">',
