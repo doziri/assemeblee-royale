@@ -745,15 +745,22 @@ function vueScanner(){
     '</div>'
   ].join('') : '';
 
-  // MOIS DÉJÀ PAYÉS (annulables)
+  // MOIS DÉJÀ PAYÉS — seul le DERNIER (le plus récent) est annulable, pour préserver l'ordre chronologique
   var moisPayes = m.paiements.map(function(p,i){return (p && p!==0)?i:-1;}).filter(function(i){return i>=0;});
+  var dernierPaye = moisPayes.length ? Math.max.apply(null, moisPayes) : -1;
   var moisPayesHTML = moisPayes.length ? [
     '<div class="card" style="margin-bottom:14px">',
-      '<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MOIS DEJA PAYES (cliquer pour annuler)</div>',
+      '<div style="color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MOIS DEJA PAYES</div>',
+      '<div style="color:var(--grisT);font-size:10px;margin-bottom:8px">Seul le dernier mois paye peut etre annule (ordre chronologique)</div>',
       '<div style="display:flex;flex-wrap:wrap;gap:6px">',
-      moisPayes.map(function(idx){
-        return '<div onclick="annulerPaiementMois(\''+m.id+'\','+idx+')" style="padding:8px 12px;border-radius:8px;cursor:pointer;background:var(--vertD);border:1px solid var(--vert);display:flex;align-items:center;gap:6px;font-size:12px;color:var(--vert)">'
-          +'<span>'+TOUS_MOIS()[idx]+'</span><span style="font-size:14px">&#x2715;</span></div>';
+      moisPayes.slice().reverse().map(function(idx){
+        var annulable = (idx===dernierPaye);
+        if(annulable){
+          return '<div onclick="annulerPaiementMois(\''+m.id+'\','+idx+')" style="padding:8px 12px;border-radius:8px;cursor:pointer;background:var(--vertD);border:1px solid var(--vert);display:flex;align-items:center;gap:6px;font-size:12px;color:var(--vert)">'
+            +'<span>'+TOUS_MOIS()[idx]+'</span><span style="font-size:14px">&#x2715;</span></div>';
+        }
+        return '<div style="padding:8px 12px;border-radius:8px;background:#0d2818;border:1px solid #1a3a2a;display:flex;align-items:center;gap:6px;font-size:12px;color:#4a7a5a;opacity:0.6">'
+          +'<span>'+TOUS_MOIS()[idx]+'</span><span style="font-size:14px">&#x2713;</span></div>';
       }).join(''),
       '</div>',
     '</div>'
@@ -1695,6 +1702,13 @@ function annulerPaiementMois(memberId, moisIdx){
   if(ROLE_ACTUEL==='lecteur'){notifier('&#x1F441; Acces lecture seule','danger');return;}
   var m=MEMBRES.find(function(x){return x.id===memberId;});
   if(!m) return;
+  // Sécurité : on ne peut annuler que le mois payé le plus récent (ordre chronologique)
+  var moisPayes = m.paiements.map(function(p,i){return (p && p!==0)?i:-1;}).filter(function(i){return i>=0;});
+  var dernierPaye = moisPayes.length ? Math.max.apply(null, moisPayes) : -1;
+  if(moisIdx !== dernierPaye){
+    notifier('&#x26D4; Vous ne pouvez annuler que le dernier mois paye ('+TOUS_MOIS()[dernierPaye]+')','danger');
+    return;
+  }
   var mois=TOUS_MOIS()[moisIdx];
   if(!confirm('Annuler le paiement de '+m.nom+' pour '+mois+' ?\nLe montant '+fmt(m.montant)+' sera retire de son solde.')) return;
   m.paiements[moisIdx]=0;
