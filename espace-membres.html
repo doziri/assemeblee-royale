@@ -1250,26 +1250,34 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionStorage.removeItem('temple_session_membre');
         chargerDepuisCloud().catch(function(){});
       } else {
-        // Recharger les données membres depuis le cloud puis retrouver le membre
-        chargerDepuisCloud().then(function(){
-          var membre = MEMBRES.find(function(m){ return m.id === data.id; });
-          if (membre) {
-            MEMBRE_CONNECTE = membre;
-            MODE_DECOUVERTE = false;
-            ouvrirEspace();
-          } else {
-            lsRemove('temple_session_membre');
-            sessionStorage.removeItem('temple_session_membre');
-          }
-        }).catch(function(){
-            // Cloud inaccessible : utiliser les données locales si disponibles
-            var membreLocal = MEMBRES.find(function(m){ return m.id === data.id; });
-            if(membreLocal){
-              MEMBRE_CONNECTE = membreLocal;
+        // Ouvrir immédiatement avec données locales si disponibles
+        var membreLocal = MEMBRES.find(function(m){ return m.id === data.id; });
+        if (membreLocal) {
+          MEMBRE_CONNECTE = membreLocal;
+          MODE_DECOUVERTE = false;
+          ouvrirEspace();
+          // Rafraîchir les données en arrière-plan
+          chargerDepuisCloud().then(function(){
+            var membreFrais = MEMBRES.find(function(m){ return m.id === data.id; });
+            if (membreFrais) {
+              MEMBRE_CONNECTE = membreFrais;
+              if (typeof afficherVue === 'function') afficherVue();
+            }
+          }).catch(function(){});
+        } else {
+          // Pas de données locales → charger depuis le cloud
+          chargerDepuisCloud().then(function(){
+            var membre = MEMBRES.find(function(m){ return m.id === data.id; });
+            if (membre) {
+              MEMBRE_CONNECTE = membre;
               MODE_DECOUVERTE = false;
               ouvrirEspace();
+            } else {
+              lsRemove('temple_session_membre');
+              sessionStorage.removeItem('temple_session_membre');
             }
-          });
+          }).catch(function(){});
+        }
       }
     } catch(e) {
       lsRemove('temple_session_membre');
