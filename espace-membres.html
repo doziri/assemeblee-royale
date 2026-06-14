@@ -489,12 +489,12 @@ async function toggleRememberMe() {
     toggle.style.background = '#1565C0';
     knob.style.background = '#64d4ff';
     knob.style.left = '22px';
-    try { localStorage.setItem('membre_remember_pref', '1'); } catch(e){}
+    try { lsSet('membre_remember_pref', '1'); } catch(e){}
   } else {
     toggle.style.background = '#1a3a5a';
     knob.style.background = '#8899aa';
     knob.style.left = '2px';
-    try { localStorage.removeItem('membre_remember_pref'); } catch(e){}
+    try { lsRemove('membre_remember_pref'); } catch(e){}
   }
 }
 
@@ -545,7 +545,7 @@ function tentativeConnexionMembre() {
     MEMBRE_CONNECTE = membre;
     MODE_DECOUVERTE = false;
 
-    var rememberMe = (localStorage.getItem('membre_remember_pref') === '1') || (document.getElementById('remember-me') && document.getElementById('remember-me').checked);
+    var rememberMe = (lsGet('membre_remember_pref') === '1') || (document.getElementById('remember-me') && document.getElementById('remember-me').checked);
     var sessionData = JSON.stringify({
       id: membre.id,
       expire: rememberMe ? (Date.now() + 30*24*60*60*1000) : null // 30 jours ou session uniquement
@@ -553,7 +553,10 @@ function tentativeConnexionMembre() {
 
     if (rememberMe) {
       // Stocker dans localStorage pour persistance longue (30 jours)
-      localStorage.setItem('temple_session_membre', sessionData);
+      lsSet('temple_session_membre', sessionData);
+    } else {
+      // Pas de souvenir : supprimer toute session longue existante
+      lsRemove('temple_session_membre');
     }
     // Toujours stocker dans sessionStorage pour la session courante
     sessionStorage.setItem('temple_session_membre', sessionData);
@@ -566,6 +569,11 @@ function tentativeConnexionMembre() {
 }
 
 
+
+// Wrapper sécurisé pour localStorage (évite les erreurs Safari/iOS en navigation privée)
+function lsGet(key) { try { return localStorage.getItem(key); } catch(e) { return null; } }
+function lsSet(key, val) { try { localStorage.setItem(key, val); return true; } catch(e) { return false; } }
+function lsRemove(key) { try { localStorage.removeItem(key); } catch(e) {} }
 
 function showErr(el, msg) {
   el.textContent = '⚠ ' + msg;
@@ -602,7 +610,7 @@ function seDeconnecter() {
   MEMBRE_CONNECTE = null;
   MODE_DECOUVERTE = false;
   sessionStorage.removeItem('membre_session');
-  localStorage.removeItem('temple_session_membre');
+  lsRemove('temple_session_membre');
   sessionStorage.removeItem('temple_session_membre');
   document.getElementById('login-overlay').style.display = 'flex';
   document.getElementById('header').style.display = 'none';
@@ -692,14 +700,17 @@ function vueDossier() {
   var nbMoisRestants = CFG.nb_mois - payes;
   var waveLink = '<div style="background:#0a1e14;border:1px solid rgba(78,255,155,0.2);border-radius:12px;padding:14px;margin-bottom:12px;">'
     +'<div style="color:#4eff9b;font-weight:700;font-size:13px;margin-bottom:10px;">💚 Payer via Wave</div>'
-    +'<div style="color:var(--grisC);font-size:11px;margin-bottom:10px;">Cotisation : <b style="color:#ffb347;">'+fmt(mFrais.montant)+' F/mois</b></div>'
+    +'<div style="color:var(--grisC);font-size:11px;margin-bottom:6px;">Cotisation : <b style="color:#ffb347;">'+fmt(mFrais.montant)+' F/mois</b></div>'
+    +'<div style="color:var(--grisT);font-size:10px;margin-bottom:10px;">Les montants affichés incluent 1% de frais Wave à votre charge.</div>'
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
       +'<div style="color:var(--grisC);font-size:12px;">Nombre de mois :</div>'
       +'<div style="display:flex;gap:6px;">'
         +[1,2,3,6].map(function(n){
-          var amt = n * mFrais.montant;
+          var amtBase = n * mFrais.montant;
+          var amtWave = Math.ceil(amtBase * 1.01); // +1% frais Wave supportés par le membre
           var note = 'Cotisation+ARR+'+encodeURIComponent(mFrais.id)+'+'+(n>1?n+'mois':'1mois');
-          var waveUrl = 'https://pay.wave.com/m/M_ci_uohmJJN-l5G8/c/ci/?amount='+amt+'&note='+note;
+          var waveUrl = 'https://pay.wave.com/m/M_ci_uohmJJN-l5G8/c/ci/?amount='+amtWave+'&note='+note;
+          var amt = amtWave; // pour l'affichage du bouton
           return '<a href="'+waveUrl+'" target="_blank" style="display:inline-block;background:#0d5c3a;border:1px solid #4eff9b;color:#4eff9b;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;text-decoration:none;text-align:center;">'
             +n+'<br/><span style="font-size:9px;">'+fmt(amt)+'</span></a>';
         }).join('')
@@ -1205,7 +1216,7 @@ if('serviceWorker' in navigator) {
 
 document.addEventListener('DOMContentLoaded', function() {
   // Restaurer l'état "Se souvenir de moi" si précédemment coché
-  if(localStorage.getItem('membre_remember_pref')) {
+  if(lsGet('membre_remember_pref')) {
     var cb = document.getElementById('remember-me');
     var toggle = document.getElementById('toggle-remember');
     var knob = document.getElementById('toggle-knob');
@@ -1217,13 +1228,13 @@ document.addEventListener('DOMContentLoaded', function() {
   attacherNavBtns();
   
   // Vérifier d'abord localStorage (session longue) puis sessionStorage
-  var sess = localStorage.getItem('temple_session_membre') || sessionStorage.getItem('temple_session_membre');
+  var sess = lsGet('temple_session_membre') || sessionStorage.getItem('temple_session_membre');
   if (sess) {
     try {
       var data = JSON.parse(sess);
       // Vérifier si la session a expiré
       if (data.expire && Date.now() > data.expire) {
-        localStorage.removeItem('temple_session_membre');
+        lsRemove('temple_session_membre');
         sessionStorage.removeItem('temple_session_membre');
         chargerDepuisCloud().catch(function(){});
       } else {
@@ -1235,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', function() {
             MODE_DECOUVERTE = false;
             ouvrirEspace();
           } else {
-            localStorage.removeItem('temple_session_membre');
+            lsRemove('temple_session_membre');
             sessionStorage.removeItem('temple_session_membre');
           }
         }).catch(function(){
@@ -1249,7 +1260,7 @@ document.addEventListener('DOMContentLoaded', function() {
           });
       }
     } catch(e) {
-      localStorage.removeItem('temple_session_membre');
+      lsRemove('temple_session_membre');
       sessionStorage.removeItem('temple_session_membre');
       chargerDepuisCloud().catch(function(){});
     }
