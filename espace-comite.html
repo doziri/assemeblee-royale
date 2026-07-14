@@ -257,6 +257,40 @@ var lastSyncTs = 0;
 var DB_REF = 'assemblee-royale-data';
 var PAIEMENTS_ANNULES_RECENT = {}; // {'MBR-001:5': timestamp} - empêche la fusion de restaurer un paiement juste annulé
 
+// Fusionne des données membres venues du cloud dans le tableau local, SANS jamais écraser
+// un paiement déjà validé localement (protège contre une lecture cloud pas encore à jour
+// qui écraserait une validation en cours d'envoi - c'était la cause du bug "paiement validé
+// puis disparu").
+function fusionnerAvecCloud(locaux, cloudMembres) {
+  var locauxParId = {};
+  locaux.forEach(function(m){ locauxParId[m.id] = m; });
+  cloudMembres.forEach(function(mc) {
+    if (!mc || !mc.id) return;
+    var ml = locauxParId[mc.id];
+    if (ml) {
+      // Union des paiements : un paiement validé localement (même pas encore envoyé au
+      // cloud) n'est jamais perdu ; on ne complète qu'avec ce que le cloud a en plus.
+      if (mc.paiements) {
+        var pc = Array.isArray(mc.paiements) ? mc.paiements : Object.values(mc.paiements);
+        for (var fi = 0; fi < pc.length; fi++) {
+          var annKey = ml.id+':'+fi;
+          var annTs = PAIEMENTS_ANNULES_RECENT[annKey];
+          var recentAnnulation = annTs && (Date.now()-annTs) < 5*60*1000;
+          if (pc[fi] && (!ml.paiements[fi] || ml.paiements[fi] === 0) && !recentAnnulation) {
+            ml.paiements[fi] = pc[fi];
+          }
+        }
+      }
+      // Les autres champs (nom, montant, tel, fonction...) suivent le cloud normalement.
+      Object.keys(mc).forEach(function(k){ if (k !== 'paiements') ml[k] = mc[k]; });
+    } else if (CODES_SUPPRIMES.indexOf(mc.id) < 0) {
+      // Membre ajouté entre-temps par un autre comité : on le conserve
+      locaux.push(mc);
+    }
+  });
+  return locaux;
+}
+
 // Normalise un numéro pour WhatsApp : format international 225XXXXXXXXXX
 function waNum(tel) {
   if (!tel) return '';
@@ -348,12 +382,17 @@ async function chargerDepuisCloud() {
     var data = await jsonbinGet();
     if (data.membres && Array.isArray(data.membres)) {
       var nb = CFG.nb_mois;
-      MEMBRES = data.membres.map(function(m) {
+      var cloudMembres = data.membres.map(function(m) {
         var p = m.paiements || [];
         if (p.length < nb) return Object.assign({}, m, {paiements: p.concat(Array(nb-p.length).fill(0))});
         if (p.length > nb) return Object.assign({}, m, {paiements: p.slice(0, nb)});
         return m;
       });
+      // Si on a déjà des membres en mémoire (session en cours), on FUSIONNE au lieu
+      // d'écraser : ça évite qu'une synchro automatique (toutes les 30s) efface une
+      // validation locale pas encore remontée au cloud. Au tout premier chargement
+      // (MEMBRES vide), on prend directement les données cloud.
+      MEMBRES = MEMBRES.length ? fusionnerAvecCloud(MEMBRES, cloudMembres) : cloudMembres;
     }
     if (data.cfg) CFG = Object.assign({}, CFG_DEF, data.cfg);
     if (data.comptes) { sauvegarderComptesLocal(data.comptes); } // comptes cloud prioritaires
@@ -399,29 +438,7 @@ async function _envoyerCloud(silencieux) {
     try {
       var cloudData = await jsonbinGet();
       if (cloudData && cloudData.membres && cloudData.membres.length) {
-        var locauxParId = {};
-        MEMBRES.forEach(function(m){ locauxParId[m.id] = m; });
-        cloudData.membres.forEach(function(mc) {
-          if (!mc || !mc.id) return;
-          var ml = locauxParId[mc.id];
-          if (ml) {
-            // Union des paiements : un paiement validé (timestamp) n'est jamais perdu
-            if (mc.paiements) {
-              var pc = Array.isArray(mc.paiements) ? mc.paiements : Object.values(mc.paiements);
-              for (var fi = 0; fi < pc.length; fi++) {
-                var annKey = ml.id+':'+fi;
-                var annTs = PAIEMENTS_ANNULES_RECENT[annKey];
-                var recentAnnulation = annTs && (Date.now()-annTs) < 5*60*1000;
-                if (pc[fi] && (!ml.paiements[fi] || ml.paiements[fi] === 0) && !recentAnnulation) {
-                  ml.paiements[fi] = pc[fi];
-                }
-              }
-            }
-          } else if (CODES_SUPPRIMES.indexOf(mc.id) < 0) {
-            // Membre ajouté entre-temps par un autre comité : on le conserve
-            MEMBRES.push(mc);
-          }
-        });
+        MEMBRES = fusionnerAvecCloud(MEMBRES, cloudData.membres);
       }
     } catch(eFusion) { /* fusion best-effort : en cas d'échec on continue l'envoi */ }
 
@@ -557,8 +574,11 @@ async function tentativeConnexion() {
   if (compte) {
     ROLE_ACTUEL='comite'; COMPTE_ACTUEL={id:compte.id,nom:compte.nom,role:'comite'};
     var remC = document.getElementById('remember-comite') && document.getElementById('remember-comite').checked;
-    var sessDataC = JSON.stringify(Object.assign({}, COMPTE_ACTUEL, {expire: remC ? Date.now()+30*24*60*60*1000 : null}));
-    if(remC) localStorage.setItem('temple_session', sessDataC);
+    // Toujours persister en localStorage (même sans "Se souvenir de moi") pour survivre
+    // à un rechargement de la page par iOS/Safari (ex: manque de mémoire sur de longues listes).
+    // "Se souvenir de moi" allonge simplement la durée de la session (30 jours vs 12h).
+    var sessDataC = JSON.stringify(Object.assign({}, COMPTE_ACTUEL, {expire: Date.now() + (remC ? 30*24*60*60*1000 : 12*60*60*1000)}));
+    localStorage.setItem('temple_session', sessDataC);
     sessionStorage.setItem('temple_session', sessDataC);
     ouvrirApp();
   } else { showLoginErr(errEl,'Identifiant ou mot de passe incorrect'); document.getElementById('login-pass').value=''; }
@@ -668,8 +688,6 @@ function NB_MOIS(){return CFG.nb_mois;}
 var MEMBRES=[],VUE_ACTUELLE='membres',MEMBRE_EDIT_ID=null,MEMBRE_SUPPR_ID=null;
 var MEMBRE_VALIDATION=null,RECU_COURANT=null,MEMBRES_EXPANDED={};
 var MOIS_SELECTIONNES=[],MONTANT_RECU=0;
-var CODES_SUPPRIMES=[];
-var FORM_CODE_CHOISI=null;
 var CODES_SUPPRIMES=[];
 var FORM_CODE_CHOISI=null;
 var FORM_MONTANT=2000,FORM_MOIS_DEBUT=0,DUREE_SELECTIONNEE=36;
@@ -1022,7 +1040,7 @@ function validerCodeManuel(){var code=document.getElementById('code-manuel')?doc
 function vueMembers(){if(!MEMBRES.length)return['<div class="empty-state">','<div style="font-size:56px;margin-bottom:16px">&#x1F465;</div>','<div style="font-weight:800;font-size:18px;margin-bottom:10px">Aucun membre enregistré</div>',+(ROLE_ACTUEL==='admin'?'<button class="btn btn-primary btn-full" onclick="ouvrirFormulaire()" style="max-width:280px">&#x2795; Ajouter le premier membre</button>':''),'</div>'].join('');var filtresBtns=['tous','ajour','retard','inactif'].map(function(f){var labels={tous:'Tous',ajour:'&#x2714; À jour',retard:'&#x26A0; Retard',inactif:'&#x2717; Inactifs'};return'<button id="filtre-'+f+'" onclick="filtrerParStatut(\''+f+'\')" class="btn '+(f===FILTRE_STATUT?'btn-primary':'btn-ghost')+'" style="padding:7px 12px;font-size:11px;white-space:nowrap">'+labels[f]+'</button>';}).join('');return['<input id="search-input" type="text" placeholder="&#x1F50D; Nom ou code..." style="margin-bottom:10px"/>','<div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:4px">'+filtresBtns+'</div>','<div id="filtre-count" style="color:var(--grisT);font-size:12px;margin-bottom:10px">'+MEMBRES.length+' membres</div>','<div id="liste-membres">'+renderListeMembres(MEMBRES)+'</div>','<div style="margin-top:16px;display:flex;gap:10px"><button class="btn btn-primary" style="flex:1" onclick="ouvrirFormulaire()">&#x2795; Ajouter</button><button class="btn btn-or" style="flex:1" onclick="genererRappelsWhatsApp()">&#x1F514; Rappels WhatsApp</button></div>'].join('');}
 function filtrerParStatut(f){FILTRE_STATUT=f;['tous','ajour','retard','inactif'].forEach(function(s){var b=document.getElementById('filtre-'+s);if(b){b.className='btn '+(s===f?'btn-primary':'btn-ghost');b.style.cssText='padding:7px 12px;font-size:11px;white-space:nowrap';}});filtrerMembres();}
 function filtrerMembres(){var q=(document.getElementById('search-input')?document.getElementById('search-input').value:'').toLowerCase();var filtered=MEMBRES.filter(function(m){return(m.nom.toLowerCase().indexOf(q)>=0||m.id.indexOf(q.toUpperCase())>=0)&&(FILTRE_STATUT==='tous'||statutMembre(m)===FILTRE_STATUT);});var el=document.getElementById('liste-membres');if(el)el.innerHTML=renderListeMembres(filtered);var cnt=document.getElementById('filtre-count');if(cnt)cnt.textContent=filtered.length+' membre'+(filtered.length!==1?'s':'')+' affiché'+(filtered.length!==1?'s':'');}
-function renderListeMembres(liste){if(!liste.length)return'<div style="text-align:center;color:var(--grisC);padding:32px;font-size:13px">Aucun membre trouvé</div>';return liste.map(function(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p){return p&&p!==0;}).length;var manq=m.paiements.filter(function(p,i){return(!p||p===0)&&i<=MOIS_COURANT();}).length;var dette=manq*m.montant,exp=MEMBRES_EXPANDED[m.id];var cal='';if(exp){cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var cls=p?'cal-paye':ec?'cal-encours':pas?'cal-impaye':'cal-futur';var lbl=MOIS_NOMS[idx%12].slice(0,1)+(CFG.annee_debut+Math.floor((CFG.mois_debut+idx)/12)).toString().slice(2);return'<div class="cal-cel '+cls+'">'+'<span class="cal-cell-label">'+lbl+'</span>'+'<span class="cal-cell-check">'+(p?'&#x2714;':pas?'&#x2717;':'·')+'</span></div>';}).join('');}var wa=m.tel?'<a href="https://wa.me/'+waNum(m.tel)+'" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:7px 12px;text-decoration:none">&#x1F4F2; WhatsApp</a>':'';var btns='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+'<button class="btn btn-bleu" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="ouvrirFormulaire(this.dataset.id)">&#x270F; Modifier</button>'+'<button class="btn btn-vert" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="ouvrirValidation(this.dataset.id)">&#x2705; Valider paiement</button>'+'<button class="btn btn-or" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="imprimerCarteA4(this.dataset.id)">&#x1F5A8; A4</button>'+'<button class="btn btn-bleu" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="imprimerCartePVC(this.dataset.id)">&#x1F4B3; PVC</button>'+'<button class="btn btn-danger" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="demanderSuppression(this.dataset.id)">&#x1F5D1; Supprimer</button>'+wa+'</div>';var stats='<div class="membre-stats">'+'<span>Payés: <b style="color:var(--vert)">'+payes+'</b></span>'+'<span>Manquants: <b style="color:'+(manq?'var(--or)':'var(--vert)')+'">'+manq+'</b></span>'+'<span>Versé: <b style="color:var(--bleu)">'+fmt(payes*m.montant)+'</b></span>'+'</div>'+(m.fonction||m.departement?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+(m.fonction?'<span style="background:#0a1e3a;border:1px solid #64d4ff44;color:var(--bleu);border-radius:6px;padding:3px 10px;font-size:11px">'+m.fonction+'</span>':'')+(m.departement?'<span style="background:#1a1200;border:1px solid #ffb34744;color:var(--or);border-radius:6px;padding:3px 10px;font-size:11px">'+m.departement+'</span>':'')+'</div>':'');var detail=exp?'<div style="padding:12px 14px;border-top:1px solid var(--border)">'+'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+cal+'</div>'+stats+btns+'</div>':'';var header='<div class="membre-header" data-id="'+m.id+'" onclick="toggleMembre(this.dataset.id)">'+avatarHTML(m.nom,s)+'<div style="flex:1;min-width:0">'+'<div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nom+'</div>'+'<div style="color:var(--grisC);font-size:11px;margin-top:2px">'+m.id+' · '+fmt(m.montant)+'/mois'+(m.fonction?'<span style="color:var(--bleu);margin-left:6px">'+m.fonction+'</span>':'')+(m.departement?'<span style="color:var(--or);margin-left:6px">'+m.departement+'</span>':'')+(dette>0?' · <span style="color:var(--or)">dette: '+fmt(dette)+'</span>':'')+'</div></div>'+badgeHTML(s)+'</div>';return'<div class="membre-card" id="card-'+m.id+'">'+header+detail+'</div>';}).join('');}
+function renderListeMembres(liste){if(!liste.length)return'<div style="text-align:center;color:var(--grisC);padding:32px;font-size:13px">Aucun membre trouvé</div>';return liste.map(function(m){var s=statutMembre(m);var payes=m.paiements.filter(function(p){return p&&p!==0;}).length;var manq=m.paiements.filter(function(p,i){return(!p||p===0)&&i<=MOIS_COURANT();}).length;var dette=manq*m.montant,exp=MEMBRES_EXPANDED[m.id];var cal='';if(exp){cal=m.paiements.map(function(p,idx){var ec=idx===MOIS_COURANT(),pas=idx<=MOIS_COURANT();var cls=p?'cal-paye':ec?'cal-encours':pas?'cal-impaye':'cal-futur';var lbl=MOIS_NOMS[idx%12].slice(0,1)+(CFG.annee_debut+Math.floor((CFG.mois_debut+idx)/12)).toString().slice(2);return'<div class="cal-cel '+cls+'">'+'<span class="cal-cell-label">'+lbl+'</span>'+'<span class="cal-cell-check">'+(p?'&#x2714;':pas?'&#x2717;':'·')+'</span></div>';}).join('');}var wa=m.tel?'<a href="https://wa.me/'+waNum(m.tel)+'" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:7px 12px;text-decoration:none">&#x1F4F2; WhatsApp</a>':'';var btns='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+'<button class="btn btn-bleu" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="ouvrirFormulaire(this.dataset.id)">&#x270F; Modifier</button>'+'<button class="btn btn-vert" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="ouvrirValidation(this.dataset.id)">&#x2705; Valider paiement</button>'+'<button class="btn btn-or" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="imprimerCarte(this.dataset.id)">&#x1F5A8; A4</button>'+'<button class="btn btn-bleu" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="imprimerCartePVC(this.dataset.id)">&#x1F4B3; PVC</button>'+'<button class="btn btn-danger" style="font-size:12px;padding:7px 12px" data-id="'+m.id+'" onclick="demanderSuppression(this.dataset.id)">&#x1F5D1; Supprimer</button>'+wa+'</div>';var stats='<div class="membre-stats">'+'<span>Payés: <b style="color:var(--vert)">'+payes+'</b></span>'+'<span>Manquants: <b style="color:'+(manq?'var(--or)':'var(--vert)')+'">'+manq+'</b></span>'+'<span>Versé: <b style="color:var(--bleu)">'+fmt(payes*m.montant)+'</b></span>'+'</div>'+(m.fonction||m.departement?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+(m.fonction?'<span style="background:#0a1e3a;border:1px solid #64d4ff44;color:var(--bleu);border-radius:6px;padding:3px 10px;font-size:11px">'+m.fonction+'</span>':'')+(m.departement?'<span style="background:#1a1200;border:1px solid #ffb34744;color:var(--or);border-radius:6px;padding:3px 10px;font-size:11px">'+m.departement+'</span>':'')+'</div>':'');var detail=exp?'<div style="padding:12px 14px;border-top:1px solid var(--border)">'+'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+cal+'</div>'+stats+btns+'</div>':'';var header='<div class="membre-header" data-id="'+m.id+'" onclick="toggleMembre(this.dataset.id)">'+avatarHTML(m.nom,s)+'<div style="flex:1;min-width:0">'+'<div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.nom+'</div>'+'<div style="color:var(--grisC);font-size:11px;margin-top:2px">'+m.id+' · '+fmt(m.montant)+'/mois'+(m.fonction?'<span style="color:var(--bleu);margin-left:6px">'+m.fonction+'</span>':'')+(m.departement?'<span style="color:var(--or);margin-left:6px">'+m.departement+'</span>':'')+(dette>0?' · <span style="color:var(--or)">dette: '+fmt(dette)+'</span>':'')+'</div></div>'+badgeHTML(s)+'</div>';return'<div class="membre-card" id="card-'+m.id+'">'+header+detail+'</div>';}).join('');}
 function toggleMembre(id){MEMBRES_EXPANDED[id]=!MEMBRES_EXPANDED[id];filtrerMembres();}
 function togglePaiement(id,idx){
   // Les paiements ne peuvent pas être modifiés directement depuis la liste
@@ -2088,187 +2106,15 @@ function genCarteHTML(m){
 }
 
 
-// ══════════════════════════════════════════════════
-// CARTE FORMAT PVC (85.6 x 54mm — format CB)
-// ══════════════════════════════════════════════════
-function genCartePVCHTML(m){
-  var s=statutMembre(m);
-  var logoHTML=LOGO_DATA
-    ?'<img src="'+LOGO_DATA+'" style="width:20px;height:20px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
-    :'<div style="width:20px;height:20px;border-radius:3px;background:#eaf0fb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;">&#x26EA;</div>';
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=75x75&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=1&color=0a1628&bgcolor=ffffff';
-  var badgeFn=m.fonction?'<span style="display:inline-block;background:#e8f0fe;border:1px solid #1565C0;color:#1565C0;border-radius:2px;padding:1px 4px;font-size:6px;font-weight:700;margin-right:2px;">'+m.fonction+'</span>':'';
-  var badgeDept=m.departement?'<span style="display:inline-block;background:#fff8e1;border:1px solid #b8860b;color:#b8860b;border-radius:2px;padding:1px 4px;font-size:6px;font-weight:700;">'+m.departement+'</span>':'';
-  return '<div style="width:85.6mm;height:54mm;background:#ffffff;border:2px solid #6366f1;border-radius:3px;overflow:hidden;font-family:Arial,sans-serif;box-sizing:border-box;display:inline-block;vertical-align:top;">'
-    +'<div style="height:4px;background:linear-gradient(90deg,#6366f1,#818cf8);"></div>'
-    +'<div style="padding:4px 5px;height:calc(54mm - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">'
-        +'<div style="flex:1;min-width:0;">'
-          +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">'
-            +logoHTML
-            +'<div>'
-              +'<div style="font-size:5.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.1;">'+CFG.nom_eglise+'</div>'
-              +'<div style="font-size:5px;color:#999;">'+CFG.nom_projet+'</div>'
-            +'</div>'
-          +'</div>'
-          +'<div style="font-weight:900;font-size:9px;color:#0a1628;line-height:1.2;margin-bottom:2px;">'+m.nom+'</div>'
-          +'<div style="font-size:8px;color:#1565C0;font-weight:700;font-family:monospace;">'+m.id+'</div>'
-          +'<div style="font-size:7px;color:#555;margin-top:1px;">Cotisation : <b style="color:#b8860b;">'+fmt(m.montant)+' F/mois</b></div>'
-          +(m.tel?'<div style="font-size:6.5px;color:#777;margin-top:1px;">'+m.tel+'</div>':'')
-          +((badgeFn||badgeDept)?'<div style="margin-top:2px;">'+badgeFn+badgeDept+'</div>':'')
-        +'</div>'
-        +'<div style="background:#f5f5f5;padding:2px;border-radius:3px;border:1px solid #ddd;flex-shrink:0;">'
-          +'<img src="'+qrUrl+'" width="75" height="75" style="display:block;" alt="QR '+m.id+'"/>'
-        +'</div>'
-      +'</div>'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e8e8ff;padding-top:2px;">'
-        +'<div style="font-size:6px;color:#aaa;">'+TOUS_MOIS()[0]+' – '+TOUS_MOIS()[CFG.nb_mois-1]+'</div>'
-      +'</div>'
-    +'</div>'
-  +'</div>';
-}
 
-function imprimerCartesPVC(liste){
-  var zone=document.getElementById('print-zone');
-  var style=[
-    '<style>',
-    '@media print{',
-    '  @page{size:A4 portrait;margin:8mm;}',
-    '  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
-    '  .page-pvc{display:grid;grid-template-columns:85.6mm 85.6mm;grid-template-rows:repeat(5,54mm);gap:3mm;page-break-after:always;page-break-inside:avoid;width:fit-content;margin:0 auto;}',
-    '  .page-pvc:last-child{page-break-after:auto;}',
-    '}',
-    '.page-pvc{display:grid;grid-template-columns:85.6mm 85.6mm;grid-template-rows:repeat(5,54mm);gap:3mm;width:fit-content;margin:0 auto 8mm auto;}',
-    '</style>'
-  ].join('');
-  var pages=[];
-  for(var i=0;i<liste.length;i+=10) pages.push(liste.slice(i,i+10));
-  var pagesHTML=pages.map(function(groupe){
-    var cells=groupe.map(function(m){ return genCartePVCHTML(m); });
-    while(cells.length<10) cells.push('<div style="width:85.6mm;height:54mm;"></div>');
-    return '<div class="page-pvc">'+cells.join('')+'</div>';
-  }).join('');
-  zone.innerHTML=style+pagesHTML;
-  setTimeout(function(){window.print();},2000);
-}
-
+// ══════════════════════════════════════════════════
+// (fonctions cartes PVC : voir plus bas, section CARTES FORMAT PVC)
+// ══════════════════════════════════════════════════
 function imprimerCartePVC(id) {
   var m = MEMBRES.find(function(x){ return x.id===id; });
   if (!m) return;
   imprimerCartesPVC([m]);
 }
-
-function imprimerToutesCartesPVC() {
-  if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
-  imprimerCartesPVC(MEMBRES);
-}
-
-
-// ══════════════════════════════════════════════════
-// CARTES FORMAT PVC (85.6 x 54mm — carte de crédit)
-// ══════════════════════════════════════════════════
-function genCartePVCHTML(m) {
-  var s = statutMembre(m);
-  var MC = MOIS_COURANT();
-  var payes = m.paiements.filter(function(p){ return p && p!==0; }).length;
-  var strip = {
-    ajour:  'linear-gradient(135deg,#0d5c3a,#4eff9b)',
-    retard: 'linear-gradient(135deg,#5c3a0d,#ffb347)',
-    inactif:'linear-gradient(135deg,#5c0d0d,#ff6b6b)'
-  };
-  var logoHTML = LOGO_DATA
-    ? '<img src="'+LOGO_DATA+'" style="width:22px;height:22px;border-radius:3px;object-fit:cover;flex-shrink:0"/>'
-    : '<div style="width:22px;height:22px;border-radius:3px;background:#1a3a5a;flex-shrink:0"></div>';
-
-  // QR code grand format pour carte PVC
-  var qrText = 'TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant;
-  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data='+encodeURIComponent(qrText)+'&format=png&margin=2&bgcolor=ffffff&color=0a1628';
-
-  // Carte PVC : 85.6mm x 54mm = 323px x 204px à 96dpi
-  return [
-    '<div style="width:323px;height:204px;background:linear-gradient(135deg,#0a1628,#0f2030);',
-    'border-radius:10px;overflow:hidden;font-family:Arial,sans-serif;',
-    'display:inline-block;margin:4mm;vertical-align:top;page-break-inside:avoid;',
-    'box-shadow:0 2px 8px rgba(0,0,0,0.4);position:relative;">',
-
-      // Bande couleur statut en haut
-      '<div style="height:4px;background:'+strip[s]+'"></div>',
-
-      '<div style="padding:8px 10px;height:calc(100% - 4px);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">',
-
-        // HEADER : logo + nom église + QR
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">',
-          '<div style="flex:1;min-width:0;">',
-            '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">',
-              logoHTML,
-              '<div style="font-size:5.5px;color:#8899aa;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.2;">'+
-                (CFG.nom_eglise||'ARR')+'</div>',
-            '</div>',
-            // Nom membre
-            '<div style="font-weight:900;font-size:11px;color:#ddeeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">'+m.nom+'</div>',
-            // Code membre en monospace
-            '<div style="font-size:9px;color:#64d4ff;font-family:Courier New,monospace;font-weight:700;margin-top:2px;">'+m.id+'</div>',
-          '</div>',
-          // QR CODE GRAND FORMAT
-          '<div style="background:#ffffff;padding:3px;border-radius:5px;flex-shrink:0;">',
-            '<img src="'+qrUrl+'" width="80" height="80" style="display:block;" alt="QR"/>',
-          '</div>',
-        '</div>',
-
-        // FOOTER : cotisation + statut
-        '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #1a3a5a;padding-top:5px;">',
-          '<div>',
-            '<div style="font-size:7px;color:#556677;text-transform:uppercase;font-weight:700;">Cotisation</div>',
-            '<div style="font-size:9px;color:#64d4ff;font-weight:700;">'+fmt(m.montant)+'/mois</div>',
-          '</div>',
-          '<div style="text-align:center;">',
-            '<div style="font-size:7px;color:#556677;text-transform:uppercase;font-weight:700;">Mois payes</div>',
-            '<div style="font-size:9px;color:#4eff9b;font-weight:700;">'+payes+'/'+CFG.nb_mois+'</div>',
-          '</div>',
-          '<div>',
-            badgeHTML(s),
-          '</div>',
-        '</div>',
-
-      '</div>',
-    '</div>'
-  ].join('');
-}
-
-
-function imprimerToutesCartesPVC() {
-  if (!MEMBRES.length) { notifier('&#x26A0; Aucun membre','danger'); return; }
-  imprimerCartesPVC(MEMBRES);
-}
-
-function imprimerCartesPVC(liste) {
-  var zone = document.getElementById('print-zone');
-  // Styles spéciaux pour format PVC
-  zone.innerHTML = [
-    '<style>',
-    '@media print {',
-    '  @page { size: A4; margin: 10mm; }',
-    '  body { background: white !important; }',
-    '  #print-zone { display: block !important; }',
-    '  .pvc-grid { display: flex; flex-wrap: wrap; gap: 4mm; justify-content: flex-start; }',
-    '  .pvc-card { page-break-inside: avoid; }',
-    '}',
-    '</style>',
-    '<div style="padding:5mm;">',
-    '<div style="font-family:Arial;font-size:10px;color:#333;margin-bottom:6mm;border-bottom:1px solid #ccc;padding-bottom:3mm;">',
-    '<strong>'+CFG.nom_eglise+'</strong> — Cartes Membres Format PVC — '+liste.length+' carte(s) — '+new Date().toLocaleDateString('fr-FR'),
-    '</div>',
-    '<div class="pvc-grid">',
-    liste.map(function(m){ return '<div class="pvc-card">'+genCartePVCHTML(m)+'</div>'; }).join(''),
-    '</div>',
-    '</div>'
-  ].join('');
-
-  // Attendre que les QR se chargent (images externes)
-  setTimeout(function(){ window.print(); }, 2000);
-}
-// ══════════════════════════════════════════════════
-
 function imprimerCarte(id){var m=MEMBRES.find(function(x){return x.id===id;});if(!m)return;imprimerCartes([m]);}
 function imprimerToutesCartes(){if(!MEMBRES.length){notifier('&#x26A0; Aucun membre','danger');return;}imprimerCartes(MEMBRES);}
 function imprimerCartes(liste){
@@ -2575,14 +2421,27 @@ function genererRappelsWhatsApp() {
   }
 
   VUE_ACTUELLE = 'rappels';
+  RAPPELS_AFFICHES = RAPPELS_PAGE_SIZE;
+  afficherVue();
+}
+
+var RAPPELS_PAGE_SIZE = 20;
+var RAPPELS_AFFICHES = 20;
+function chargerPlusRappels() {
+  RAPPELS_AFFICHES += RAPPELS_PAGE_SIZE;
   afficherVue();
 }
 
 function vueRappels() {
   var MC = MOIS_COURANT();
-  var membresRetard = MEMBRES.filter(function(m){ return statutMembre(m) !== 'ajour'; });
-  var avecTel = membresRetard.filter(function(m){ return m.tel; });
-  var sansTel = membresRetard.filter(function(m){ return !m.tel; });
+  var membresRetardTous = MEMBRES.filter(function(m){ return statutMembre(m) !== 'ajour'; });
+  var avecTelTous = membresRetardTous.filter(function(m){ return m.tel; });
+  var sansTel = membresRetardTous.filter(function(m){ return !m.tel; });
+  // Pagination : on ne construit le HTML (lourd : message complet par membre) que pour
+  // les membres affichés, afin d'éviter de saturer la mémoire sur mobile (iPhone) quand
+  // il y a plus de 100 membres en retard, ce qui provoquait un rechargement / déconnexion.
+  var avecTel = avecTelTous.slice(0, RAPPELS_AFFICHES);
+  var membresRetard = membresRetardTous;
 
   var lignes = avecTel.map(function(m) {
     var retards = m.paiements.filter(function(p,i){ return !p && i<=MC; }).length;
@@ -2606,10 +2465,14 @@ function vueRappels() {
       + '<div style="background:#0d1e14;border:1px solid #1a3a1a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;color:#aaccaa;font-family:monospace;white-space:pre-wrap;max-height:120px;overflow-y:auto">' + msg.replace(/</g,'&lt;') + '</div>'
       + '<div style="display:flex;gap:8px">'
         + '<a href="' + waUrl + '" target="_blank" class="btn btn-primary" style="flex:1;text-decoration:none;font-size:12px">&#x1F4F2; Envoyer sur WhatsApp</a>'
-        + '<button onclick="copierRappel(this, decodeHelper_' + m.id.replace(/-/g,'') + ')" class="btn btn-ghost" style="font-size:12px;padding:8px 12px">&#x1F4CB; Copier</button>'
+        + '<button onclick="copierRappel(this, \'' + msgEncoded + '\')" class="btn btn-ghost" style="font-size:12px;padding:8px 12px">&#x1F4CB; Copier</button>'
       + '</div>'
     + '</div>';
   }).join('');
+
+  var boutonPlus = avecTelTous.length > RAPPELS_AFFICHES
+    ? '<button onclick="chargerPlusRappels()" class="btn btn-ghost btn-full" style="margin-top:10px">&#x2B07; Charger plus (' + (avecTelTous.length - RAPPELS_AFFICHES) + ' restants)</button>'
+    : '';
 
   var sansTelHtml = sansTel.length ? '<div class="card" style="border-color:rgba(255,107,107,0.3);margin-bottom:14px">'
     + '<div style="color:var(--rouge);font-weight:800;font-size:13px;margin-bottom:10px">&#x26A0; Membres sans WhatsApp (' + sansTel.length + ')</div>'
@@ -2637,11 +2500,13 @@ function vueRappels() {
     sansTelHtml,
     avecTel.length ? '<div style="color:var(--or);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">MEMBRES A RELANCER (' + avecTel.length + ')</div>' : '',
     lignes || '<div class="empty-state"><div style="font-size:48px">&#x1F4F2;</div><div style="margin-top:16px;font-weight:700;color:var(--vert)">Tous les membres avec WhatsApp sont a jour !</div></div>',
+    boutonPlus,
   ].join('');
 }
 
-function copierRappel(btn, msg) {
-  if(!msg) return;
+function copierRappel(btn, msgEncoded) {
+  if(!msgEncoded) return;
+  var msg = decodeURIComponent(msgEncoded);
   try { navigator.clipboard.writeText(msg); } catch(e) {}
   btn.innerHTML = '&#x2714; Copie !';
   setTimeout(function(){ btn.innerHTML = '&#x1F4CB; Copier'; }, 2000);
