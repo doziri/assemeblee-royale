@@ -114,7 +114,7 @@ function _qrFallback(el, text, size, cacheKey) {
     if (idx >= apis.length) {
       // 5. Dernier recours - afficher le code
       var code = text.split('|')[1] || text;
-      el.innerHTML = '<div style="width:'+size+'px;height:'+size+'px;background:#1a3a5a;border:2px solid #4eff9b;display:flex;align-items:center;justify-content:center;font-size:12px;color:#4eff9b;text-align:center;font-weight:900;border-radius:6px;padding:4px;">'+code+'</div>';
+      el.innerHTML = '<div style="width:'+size+'px;height:'+size+'px;background:#255382;border:2px solid #4eff9b;display:flex;align-items:center;justify-content:center;font-size:12px;color:#4eff9b;text-align:center;font-weight:900;border-radius:6px;padding:4px;">'+code+'</div>';
       return;
     }
     var img = new Image();
@@ -140,7 +140,7 @@ function _qrFallback(el, text, size, cacheKey) {
     tryApi(0);
   } else {
     var code = text.split('|')[1] || text;
-    el.innerHTML = '<div style="width:'+size+'px;height:'+size+'px;background:#1a3a5a;border:2px solid #4eff9b;display:flex;align-items:center;justify-content:center;font-size:12px;color:#4eff9b;text-align:center;font-weight:900;border-radius:6px;padding:4px;">'+code+'</div>';
+    el.innerHTML = '<div style="width:'+size+'px;height:'+size+'px;background:#255382;border:2px solid #4eff9b;display:flex;align-items:center;justify-content:center;font-size:12px;color:#4eff9b;text-align:center;font-weight:900;border-radius:6px;padding:4px;">'+code+'</div>';
   }
 }
 
@@ -154,23 +154,23 @@ function afficherQRFallback(el, text, size) {
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#07101a;--card:#0f1923;--border:#1a2a3a;
+  --bg:#122942;--card:#1e3247;--border:#2a435d;
   --vert:#4eff9b;--vertD:#0d5c3a;
   --or:#ffb347;--orD:#5c3a0d;
   --rouge:#ff6b6b;--rougeD:#5c0d0d;
-  --bleu:#64d4ff;--bleuD:#0a1e3a;
+  --bleu:#64d4ff;--bleuD:#113466;
   --grisC:#8899aa;--grisT:#334455;--blanc:#ddeeff;
   --violet:#c084fc;--violetD:#3b1f6e;
 }
 body{background:var(--bg);color:var(--blanc);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#1a3a5a;border-radius:3px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#255382;border-radius:3px}
 
 /* ── LOGIN ── */
-#login-overlay{position:fixed;inset:0;background:#07101a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:60px 16px 30px;overflow-y:auto}
-.login-card{background:#0f1923;border:1px solid rgba(100,212,255,0.2);border-radius:20px;padding:28px 24px;width:100%;max-width:360px}
+#login-overlay{position:fixed;inset:0;background:#122942;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:60px 16px 30px;overflow-y:auto}
+.login-card{background:#1e3247;border:1px solid rgba(100,212,255,0.2);border-radius:20px;padding:28px 24px;width:100%;max-width:360px}
 
 /* ── HEADER ── */
-#header{background:linear-gradient(135deg,#0a1628,#0f2030);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;padding:0 16px}
+#header{background:linear-gradient(135deg,#142c51,#1b3a57);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;padding:0 16px}
 #header-top{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 0 8px}
 #nav{display:flex;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .nav-btn{background:none;border:none;cursor:pointer;padding:10px 14px;font-size:12px;font-weight:500;color:var(--grisC);border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;transition:color .15s}
@@ -181,12 +181,12 @@ body{background:var(--bg);color:var(--blanc);font-family:'Segoe UI',system-ui,sa
 
 /* ── CARDS ── */
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
-.card-bleu{background:#0a1628;border:1px solid rgba(100,212,255,0.25);border-radius:14px;padding:18px;margin-bottom:14px}
-.card-vert{background:#0a1e14;border:1px solid rgba(78,255,155,0.25);border-radius:14px;padding:18px;margin-bottom:14px}
-.card-or{background:#1a110a;border:1px solid rgba(255,179,71,0.25);border-radius:14px;padding:18px;margin-bottom:14px}
+.card-bleu{background:#142c51;border:1px solid rgba(100,212,255,0.25);border-radius:14px;padding:18px;margin-bottom:14px}
+.card-vert{background:#17442e;border:1px solid rgba(78,255,155,0.25);border-radius:14px;padding:18px;margin-bottom:14px}
+.card-or{background:#3f2918;border:1px solid rgba(255,179,71,0.25);border-radius:14px;padding:18px;margin-bottom:14px}
 
 /* ── FORMS ── */
-input,select{background:#111d2a;border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--blanc);font-size:14px;outline:none;width:100%;font-family:inherit;-webkit-appearance:none}
+input,select{background:#20364e;border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--blanc);font-size:14px;outline:none;width:100%;font-family:inherit;-webkit-appearance:none}
 input:focus,select:focus{border-color:var(--bleu)}
 label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px}
 .field{margin-bottom:14px}
@@ -213,12 +213,12 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
 .cal-paye{background:var(--vertD);border-color:rgba(78,255,155,0.3)}.cal-paye .cal-cell-check{color:var(--vert)}
 .cal-impaye{background:var(--rougeD)}.cal-impaye .cal-cell-check{color:rgba(255,107,107,0.5)}
 .cal-encours{background:var(--orD);border-color:var(--or)}.cal-encours .cal-cell-check{color:var(--or)}
-.cal-futur{background:#111d2a}.cal-futur .cal-cell-check{color:var(--grisT)}
+.cal-futur{background:#20364e}.cal-futur .cal-cell-check{color:var(--grisT)}
 
 /* ── MISC ── */
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.progress-track{background:#1a2a3a;border-radius:8px;height:14px;overflow:hidden}
+.progress-track{background:#2a435d;border-radius:8px;height:14px;overflow:hidden}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--bleuD),var(--bleu));border-radius:8px}
 .sep{height:1px;background:var(--border);margin:12px 0}
 .qr-wrap{background:#fff;padding:6px;border-radius:10px;display:inline-block}
@@ -242,7 +242,7 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
 @media print{body>*:not(#print-zone){display:none!important}#print-zone{display:block!important}@page{margin:10mm;size:A4}}
 #print-zone{display:none}
 </style>
-<meta name="theme-color" content="#07101a"/>
+<meta name="theme-color" content="#122942"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -257,7 +257,7 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
 <!-- ══ LOGIN ══ -->
 <div id="login-overlay">
   <div style="text-align:center;margin-bottom:28px">
-    <div id="login-logo-display" style="width:80px;height:80px;border-radius:16px;background:#0f1923;border:1px solid #1a2a3a;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto">⛪</div>
+    <div id="login-logo-display" style="width:80px;height:80px;border-radius:16px;background:#1e3247;border:1px solid #2a435d;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto">⛪</div>
     <div style="color:var(--bleu);font-weight:900;font-size:20px;margin-top:12px" id="login-org-name">ESPACE MEMBRES</div>
     <div style="color:var(--grisT);font-size:13px;margin-top:6px">Consultez votre dossier de cotisation</div>
     <div id="sync-status-login" style="margin-top:10px"></div>
@@ -273,9 +273,9 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
       <input id="login-tel" type="tel" placeholder="Ex : +225 07 12 34 56"/>
       <div style="color:var(--grisT);font-size:10px;margin-top:4px">Si votre numéro est enregistré, il doit correspondre. Sinon, laissez vide.</div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px 12px;background:#0a1828;border-radius:8px;border:1px solid #1a3a5a;cursor:pointer" onclick="toggleRememberMe()">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px 12px;background:#143051;border-radius:8px;border:1px solid #255382;cursor:pointer" onclick="toggleRememberMe()">
       <!-- Toggle switch visuel -->
-      <div id="toggle-remember" style="width:44px;height:24px;min-width:44px;background:#1a3a5a;border-radius:12px;position:relative;transition:background 0.3s">
+      <div id="toggle-remember" style="width:44px;height:24px;min-width:44px;background:#255382;border-radius:12px;position:relative;transition:background 0.3s">
         <div id="toggle-knob" style="width:20px;height:20px;background:#8899aa;border-radius:50%;position:absolute;top:2px;left:2px;transition:all 0.3s"></div>
       </div>
       <input type="checkbox" id="remember-me" style="display:none"/>
@@ -296,7 +296,7 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
 <div id="header" style="display:none">
   <div id="header-top">
     <div style="display:flex;align-items:center;gap:10px">
-      <div id="header-logo-wrap" style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:#1a2a3a;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border)">
+      <div id="header-logo-wrap" style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:#2a435d;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border)">
         <span>⛪</span>
       </div>
       <div>
@@ -318,7 +318,7 @@ label{color:var(--grisC);font-size:11px;font-weight:700;letter-spacing:1px;text-
   </div>
 </div>
 
-<div id="barre-membre" style="display:none;background:#0a1628;border-top:1px solid #1a3a5a;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:10px">
+<div id="barre-membre" style="display:none;background:#142c51;border-top:1px solid #255382;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:10px">
   <span style="color:var(--grisT)">👤 Espace Membres</span>
 </div>
 
@@ -491,7 +491,7 @@ async function toggleRememberMe() {
     knob.style.left = '22px';
     try { lsSet('membre_remember_pref', '1'); } catch(e){}
   } else {
-    toggle.style.background = '#1a3a5a';
+    toggle.style.background = '#255382';
     knob.style.background = '#8899aa';
     knob.style.left = '2px';
     try { lsRemove('membre_remember_pref'); } catch(e){}
@@ -710,7 +710,7 @@ function vueDossier() {
     : '';
   // Lien Wave avec sélecteur de mois
   var nbMoisRestants = CFG.nb_mois - payes;
-  var waveLink = '<div style="background:#0a1e14;border:1px solid rgba(78,255,155,0.2);border-radius:12px;padding:14px;margin-bottom:12px;">'
+  var waveLink = '<div style="background:#17442e;border:1px solid rgba(78,255,155,0.2);border-radius:12px;padding:14px;margin-bottom:12px;">'
     +'<div style="color:#4eff9b;font-weight:700;font-size:13px;margin-bottom:10px;">💚 Payer via Wave</div>'
     +'<div style="color:var(--grisC);font-size:11px;margin-bottom:6px;">Cotisation : <b style="color:#ffb347;">'+fmt(mFrais.montant)+' F/mois</b></div>'
     +'<div style="color:var(--grisT);font-size:10px;margin-bottom:10px;">Les montants affichés incluent 1% de frais Wave à votre charge.</div>'
@@ -729,6 +729,25 @@ function vueDossier() {
       +'</div>'
     +'</div>'
     +'</div>';
+
+  // Bloc "J'ai déjà payé" — signale un paiement au comité (file d'attente de confirmation).
+  // N'écrit jamais dans mFrais.paiements : uniquement dans paiementsAttente, en attente
+  // de vérification et confirmation par le comité, exactement comme un signalement
+  // effectué par le comité lui-même depuis espace-comite.html.
+  var signalBlock = '';
+  if (nbMoisRestants > 0) {
+    signalBlock = '<div class="card" style="margin-bottom:12px;border-color:rgba(255,179,71,0.3)">'
+      +'<div style="color:#ffb347;font-weight:700;font-size:13px;margin-bottom:6px">&#x2705; J\'ai déjà payé sur Wave</div>'
+      +'<div style="color:var(--grisC);font-size:11px;margin-bottom:10px">Signalez votre paiement pour que le comité le confirme rapidement.</div>'
+      +'<input id="wave-reference" type="text" placeholder="Référence Wave (optionnel)" style="width:100%;margin-bottom:10px;padding:9px 10px;background:#1a314e;border:1px solid var(--border);border-radius:8px;color:var(--blanc);font-size:12px"/>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +[1,2,3,6].map(function(n){
+        return '<button id="btn-signal-'+n+'" class="btn btn-or" style="flex:1;min-width:60px;font-size:12px;padding:8px" onclick="signalerPaiementWave('+n+')">'+n+' mois</button>';
+      }).join('')
+      +'</div>'
+      +'<div id="signal-statut" style="font-size:11px;color:var(--grisC);margin-top:8px"></div>'
+    +'</div>';
+  }
 
   return [
     // PROFIL
@@ -754,7 +773,7 @@ function vueDossier() {
        ['Total versé', fmt(verse), 'var(--bleu)'],
        ['Taux', taux+'%', taux>=80?'var(--vert)':taux>=50?'var(--or)':'var(--rouge)']
       ].map(function(x){
-        return '<div style="background:#0d1928;border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">'
+        return '<div style="background:#1a314e;border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">'
           +'<div style="color:var(--grisC);font-size:9px;font-weight:700;text-transform:uppercase">'+x[0]+'</div>'
           +'<div style="color:'+x[2]+';font-weight:900;font-size:16px;margin-top:6px">'+x[1]+'</div>'
           +'</div>';
@@ -784,6 +803,9 @@ function vueDossier() {
       }).join(''),
     '</div>',
 
+    // SIGNALER UN PAIEMENT WAVE
+    signalBlock,
+
     // ACTIONS
     '<div style="display:flex;gap:10px;flex-wrap:wrap">',
       '<button class="btn btn-bleu" style="flex:1;font-size:12px" onclick="changerVue(\'calendrier\')">📅 Voir calendrier</button>',
@@ -792,6 +814,79 @@ function vueDossier() {
       waLink,
     '</div>'
   ].join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// SIGNALEMENT D'UN PAIEMENT WAVE (file d'attente de confirmation comité)
+// N'écrit jamais dans membres/*/paiements — uniquement dans paiementsAttente,
+// lue et confirmée manuellement par le comité dans espace-comite.html.
+// ══════════════════════════════════════════════════════════
+function calculerMoisASignaler(mFrais, n) {
+  var arr = [];
+  var idx = 0;
+  while (arr.length < n && idx < mFrais.paiements.length) {
+    if (!mFrais.paiements[idx]) arr.push(idx);
+    idx++;
+  }
+  return arr;
+}
+
+function signalerPaiementWave(n) {
+  var m = MEMBRE_CONNECTE;
+  if (!m) return;
+  var mFrais = MEMBRES.find(function(x){ return x.id === m.id; }) || m;
+  var mois = calculerMoisASignaler(mFrais, n);
+  var statutEl = document.getElementById('signal-statut');
+  if (!mois.length) {
+    if (statutEl) statutEl.textContent = '⚠ Aucun mois à signaler.';
+    return;
+  }
+  var refEl = document.getElementById('wave-reference');
+  var reference = refEl ? refEl.value.trim() : '';
+  var btn = document.getElementById('btn-signal-'+n);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  if (statutEl) statutEl.textContent = 'Envoi en cours...';
+
+  db.ref('assemblee-royale-data/paiementsAttente').once('value').then(function(snap){
+    var liste = snap.val() || [];
+    if (!Array.isArray(liste)) liste = Object.keys(liste).map(function(k){ return liste[k]; });
+
+    // Anti-doublon : un signalement identique (même membre, mêmes mois) déjà en attente
+    var dejaExistant = liste.some(function(a){
+      return a && a.membreId === mFrais.id && Array.isArray(a.mois)
+        && a.mois.length === mois.length
+        && a.mois.every(function(x){ return mois.indexOf(x) >= 0; });
+    });
+    if (dejaExistant) {
+      if (statutEl) statutEl.textContent = '⚠ Déjà signalé, en attente de vérification par le comité.';
+      if (btn) { btn.disabled = false; btn.textContent = n+' mois'; }
+      return;
+    }
+
+    var entree = {
+      id: 'ATT-'+Date.now(),
+      membreId: mFrais.id,
+      membreNom: mFrais.nom,
+      mois: mois,
+      montant: mois.length * mFrais.montant,
+      montantRecu: mois.length * mFrais.montant,
+      reference: reference,
+      origine: 'membre',
+      date: new Date().toISOString()
+    };
+    liste.push(entree);
+
+    db.ref('assemblee-royale-data/paiementsAttente').set(liste).then(function(){
+      notifier('&#x2705; Paiement signalé — le comité va le vérifier et le confirmer');
+      afficherVue();
+    }).catch(function(){
+      if (statutEl) statutEl.textContent = '⚠ Échec de l\'envoi. Réessayez ou contactez le comité.';
+      if (btn) { btn.disabled = false; btn.textContent = n+' mois'; }
+    });
+  }).catch(function(){
+    if (statutEl) statutEl.textContent = '⚠ Erreur réseau. Réessayez.';
+    if (btn) { btn.disabled = false; btn.textContent = n+' mois'; }
+  });
 }
 
 // ══════════════════════════════════════════════════════════
@@ -834,7 +929,7 @@ function vueCalendrier() {
     '<div class="card">',
       '<div class="grid-3" style="margin-bottom:16px">',
         [['Payés',payes,'var(--vert)'],['En retard',manq,'var(--rouge)'],['À venir',CFG.nb_mois-MC-1,'var(--grisC)']].map(function(x){
-          return '<div style="background:#111d2a;border-radius:10px;padding:10px;text-align:center">'
+          return '<div style="background:#20364e;border-radius:10px;padding:10px;text-align:center">'
             +'<div style="color:var(--grisC);font-size:9px;font-weight:700;text-transform:uppercase">'+x[0]+'</div>'
             +'<div style="color:'+x[2]+';font-weight:900;font-size:18px;margin-top:4px">'+x[1]+'</div>'
             +'</div>';
@@ -845,7 +940,7 @@ function vueCalendrier() {
           '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:var(--vertD);border-radius:3px;display:inline-block"></span> Payé</span>',
           '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:var(--orD);border-radius:3px;display:inline-block"></span> Mois en cours</span>',
           '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:var(--rougeD);border-radius:3px;display:inline-block"></span> Impayé</span>',
-          '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#111d2a;border-radius:3px;display:inline-block"></span> Futur</span>',
+          '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#20364e;border-radius:3px;display:inline-block"></span> Futur</span>',
         '</div>',
         '<div style="display:flex;flex-wrap:wrap;gap:4px">'+cal+'</div>',
       '</div>',
@@ -946,7 +1041,7 @@ function vueMaCarte() {
     '</div>',
 
     // CARTE MEMBRE EN DESSOUS
-    '<div style="background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:16px;overflow:hidden;margin-bottom:16px">',
+    '<div style="background:linear-gradient(135deg,#142c51,#1b3a57);border:1px solid #255382;border-radius:16px;overflow:hidden;margin-bottom:16px">',
       '<div style="height:5px;background:'+strip[s]+'"></div>',
       '<div style="padding:16px">',
         '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">',
@@ -969,7 +1064,7 @@ function vueMaCarte() {
             +'</div>';
           }).join(''),
         '</div>',
-        '<div style="font-size:9px;color:var(--grisT);border-top:1px solid #1a3a5a;padding-top:6px">'+mFrais.id+(mFrais.tel?' · '+mFrais.tel:'')+'</div>',
+        '<div style="font-size:9px;color:var(--grisT);border-top:1px solid #255382;padding-top:6px">'+mFrais.id+(mFrais.tel?' · '+mFrais.tel:'')+'</div>',
       '</div>',
     '</div>',
 
@@ -1000,7 +1095,7 @@ function genCarteMembreHTML(m){
   var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
   var s=statutMembre(m);
   var logoHTML=LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:28px;height:28px;border-radius:4px;object-fit:cover"/>'
-    :'<div style="width:28px;height:28px;border-radius:4px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:14px">&#x26EA;</div>';
+    :'<div style="width:28px;height:28px;border-radius:4px;background:#255382;display:flex;align-items:center;justify-content:center;font-size:14px">&#x26EA;</div>';
   var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=90x90&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2';
 
   // Calendrier cochable : une case par mois
@@ -1026,7 +1121,7 @@ function genCarteMembreHTML(m){
   }
 
   return [
-    '<div style="width:90mm;background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;display:inline-block;margin:3mm;vertical-align:top;page-break-inside:avoid;">',
+    '<div style="width:90mm;background:linear-gradient(135deg,#142c51,#1b3a57);border:1px solid #255382;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;display:inline-block;margin:3mm;vertical-align:top;page-break-inside:avoid;">',
       '<div style="height:5px;background:'+strip[s]+'"></div>',
       '<div style="padding:8px 10px;">',
 
@@ -1052,7 +1147,7 @@ function genCarteMembreHTML(m){
         '</div>',
 
         // CALENDRIER COCHABLE
-        '<div style="border-top:1px solid #1a3a5a;padding-top:6px;">',
+        '<div style="border-top:1px solid #255382;padding-top:6px;">',
           '<div style="font-size:7px;color:#8899aa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Calendrier des cotisations</div>',
           '<table style="width:100%;border-collapse:collapse;font-size:7px;">',
             calRows,
@@ -1060,7 +1155,7 @@ function genCarteMembreHTML(m){
         '</div>',
 
         // FOOTER
-        '<div style="font-size:6px;color:#334455;border-top:1px solid #1a3a5a;padding-top:4px;margin-top:6px;">',
+        '<div style="font-size:6px;color:#334455;border-top:1px solid #255382;padding-top:4px;margin-top:6px;">',
           'Carte valide pour la periode '+TOUS_MOIS()[0]+' - '+TOUS_MOIS()[CFG.nb_mois-1],
         '</div>',
       '</div>',
@@ -1096,7 +1191,7 @@ function genCarteMembreHTML(m){
   var strip={ajour:'linear-gradient(90deg,#0d5c3a,#4eff9b)',retard:'linear-gradient(90deg,#5c3a0d,#ffb347)',inactif:'linear-gradient(90deg,#5c0d0d,#ff6b6b)'};
   var s=statutMembre(m);
   var logoHTML=LOGO_DATA?'<img src="'+LOGO_DATA+'" style="width:28px;height:28px;border-radius:4px;object-fit:cover"/>'
-    :'<div style="width:28px;height:28px;border-radius:4px;background:#1a3a5a;display:flex;align-items:center;justify-content:center;font-size:14px">&#x26EA;</div>';
+    :'<div style="width:28px;height:28px;border-radius:4px;background:#255382;display:flex;align-items:center;justify-content:center;font-size:14px">&#x26EA;</div>';
   var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=90x90&data='+encodeURIComponent('TEMPLE|'+m.id+'|'+m.nom+'|'+m.montant)+'&format=png&margin=2';
 
   // Calendrier cochable : une case par mois
@@ -1122,7 +1217,7 @@ function genCarteMembreHTML(m){
   }
 
   return [
-    '<div style="width:90mm;background:linear-gradient(135deg,#0a1628,#0f2030);border:1px solid #1a3a5a;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;display:inline-block;margin:3mm;vertical-align:top;page-break-inside:avoid;">',
+    '<div style="width:90mm;background:linear-gradient(135deg,#142c51,#1b3a57);border:1px solid #255382;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;display:inline-block;margin:3mm;vertical-align:top;page-break-inside:avoid;">',
       '<div style="height:5px;background:'+strip[s]+'"></div>',
       '<div style="padding:8px 10px;">',
 
@@ -1148,7 +1243,7 @@ function genCarteMembreHTML(m){
         '</div>',
 
         // CALENDRIER COCHABLE
-        '<div style="border-top:1px solid #1a3a5a;padding-top:6px;">',
+        '<div style="border-top:1px solid #255382;padding-top:6px;">',
           '<div style="font-size:7px;color:#8899aa;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Calendrier des cotisations</div>',
           '<table style="width:100%;border-collapse:collapse;font-size:7px;">',
             calRows,
@@ -1156,7 +1251,7 @@ function genCarteMembreHTML(m){
         '</div>',
 
         // FOOTER
-        '<div style="font-size:6px;color:#334455;border-top:1px solid #1a3a5a;padding-top:4px;margin-top:6px;">',
+        '<div style="font-size:6px;color:#334455;border-top:1px solid #255382;padding-top:4px;margin-top:6px;">',
           'Carte valide pour la periode '+TOUS_MOIS()[0]+' - '+TOUS_MOIS()[CFG.nb_mois-1],
         '</div>',
       '</div>',
