@@ -730,25 +730,6 @@ function vueDossier() {
     +'</div>'
     +'</div>';
 
-  // Bloc "J'ai déjà payé" — signale un paiement au comité (file d'attente de confirmation).
-  // N'écrit jamais dans mFrais.paiements : uniquement dans paiementsAttente, en attente
-  // de vérification et confirmation par le comité, exactement comme un signalement
-  // effectué par le comité lui-même depuis espace-comite.html.
-  var signalBlock = '';
-  if (nbMoisRestants > 0) {
-    signalBlock = '<div class="card" style="margin-bottom:12px;border-color:rgba(255,179,71,0.3)">'
-      +'<div style="color:#ffb347;font-weight:700;font-size:13px;margin-bottom:6px">&#x2705; J\'ai déjà payé sur Wave</div>'
-      +'<div style="color:var(--grisC);font-size:11px;margin-bottom:10px">Signalez votre paiement pour que le comité le confirme rapidement.</div>'
-      +'<input id="wave-reference" type="text" placeholder="Référence Wave (optionnel)" style="width:100%;margin-bottom:10px;padding:9px 10px;background:#1a314e;border:1px solid var(--border);border-radius:8px;color:var(--blanc);font-size:12px"/>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +[1,2,3,6].map(function(n){
-        return '<button id="btn-signal-'+n+'" class="btn btn-or" style="flex:1;min-width:60px;font-size:12px;padding:8px" onclick="signalerPaiementWave('+n+')">'+n+' mois</button>';
-      }).join('')
-      +'</div>'
-      +'<div id="signal-statut" style="font-size:11px;color:var(--grisC);margin-top:8px"></div>'
-    +'</div>';
-  }
-
   return [
     // PROFIL
     '<div class="card-bleu">',
@@ -803,9 +784,6 @@ function vueDossier() {
       }).join(''),
     '</div>',
 
-    // SIGNALER UN PAIEMENT WAVE
-    signalBlock,
-
     // ACTIONS
     '<div style="display:flex;gap:10px;flex-wrap:wrap">',
       '<button class="btn btn-bleu" style="flex:1;font-size:12px" onclick="changerVue(\'calendrier\')">📅 Voir calendrier</button>',
@@ -814,79 +792,6 @@ function vueDossier() {
       waLink,
     '</div>'
   ].join('');
-}
-
-// ══════════════════════════════════════════════════════════
-// SIGNALEMENT D'UN PAIEMENT WAVE (file d'attente de confirmation comité)
-// N'écrit jamais dans membres/*/paiements — uniquement dans paiementsAttente,
-// lue et confirmée manuellement par le comité dans espace-comite.html.
-// ══════════════════════════════════════════════════════════
-function calculerMoisASignaler(mFrais, n) {
-  var arr = [];
-  var idx = 0;
-  while (arr.length < n && idx < mFrais.paiements.length) {
-    if (!mFrais.paiements[idx]) arr.push(idx);
-    idx++;
-  }
-  return arr;
-}
-
-function signalerPaiementWave(n) {
-  var m = MEMBRE_CONNECTE;
-  if (!m) return;
-  var mFrais = MEMBRES.find(function(x){ return x.id === m.id; }) || m;
-  var mois = calculerMoisASignaler(mFrais, n);
-  var statutEl = document.getElementById('signal-statut');
-  if (!mois.length) {
-    if (statutEl) statutEl.textContent = '⚠ Aucun mois à signaler.';
-    return;
-  }
-  var refEl = document.getElementById('wave-reference');
-  var reference = refEl ? refEl.value.trim() : '';
-  var btn = document.getElementById('btn-signal-'+n);
-  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
-  if (statutEl) statutEl.textContent = 'Envoi en cours...';
-
-  db.ref('assemblee-royale-data/paiementsAttente').once('value').then(function(snap){
-    var liste = snap.val() || [];
-    if (!Array.isArray(liste)) liste = Object.keys(liste).map(function(k){ return liste[k]; });
-
-    // Anti-doublon : un signalement identique (même membre, mêmes mois) déjà en attente
-    var dejaExistant = liste.some(function(a){
-      return a && a.membreId === mFrais.id && Array.isArray(a.mois)
-        && a.mois.length === mois.length
-        && a.mois.every(function(x){ return mois.indexOf(x) >= 0; });
-    });
-    if (dejaExistant) {
-      if (statutEl) statutEl.textContent = '⚠ Déjà signalé, en attente de vérification par le comité.';
-      if (btn) { btn.disabled = false; btn.textContent = n+' mois'; }
-      return;
-    }
-
-    var entree = {
-      id: 'ATT-'+Date.now(),
-      membreId: mFrais.id,
-      membreNom: mFrais.nom,
-      mois: mois,
-      montant: mois.length * mFrais.montant,
-      montantRecu: mois.length * mFrais.montant,
-      reference: reference,
-      origine: 'membre',
-      date: new Date().toISOString()
-    };
-    liste.push(entree);
-
-    db.ref('assemblee-royale-data/paiementsAttente').set(liste).then(function(){
-      notifier('&#x2705; Paiement signalé — le comité va le vérifier et le confirmer');
-      afficherVue();
-    }).catch(function(){
-      if (statutEl) statutEl.textContent = '⚠ Échec de l\'envoi. Réessayez ou contactez le comité.';
-      if (btn) { btn.disabled = false; btn.textContent = n+' mois'; }
-    });
-  }).catch(function(){
-    if (statutEl) statutEl.textContent = '⚠ Erreur réseau. Réessayez.';
-    if (btn) { btn.disabled = false; btn.textContent = n+' mois'; }
-  });
 }
 
 // ══════════════════════════════════════════════════════════
