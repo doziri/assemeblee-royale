@@ -6,6 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
+<meta name="app-version" content="2026-08-18-01"/>
 <title>⛪ Temple – Espace Comité</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -490,6 +491,33 @@ function demarrerSyncAuto() {
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(function() { chargerDepuisCloud().then(function(){ if(VUE_ACTUELLE==='membres'||VUE_ACTUELLE==='dashboard') afficherVue(); }); }, SYNC_INTERVAL);
 }
+
+// ── DÉTECTION DE NOUVELLE VERSION ──
+// Compare la version affichée (meta app-version) à celle réellement déployée sur
+// GitHub Pages, en recontactant le fichier lui-même (avec cache:'no-store' pour
+// contourner le cache du navigateur). Affiche un bandeau si une mise à jour existe.
+var APP_VERSION = (document.querySelector('meta[name="app-version"]') || {}).content || '';
+function verifierNouvelleVersion() {
+  fetch(window.location.pathname + '?_v=' + Date.now(), {cache: 'no-store'})
+    .then(function(r){ return r.text(); })
+    .then(function(html){
+      var m = html.match(/<meta name="app-version" content="([^"]+)"/);
+      if (m && m[1] && m[1] !== APP_VERSION) {
+        afficherBanniereNouvelleVersion();
+      }
+    })
+    .catch(function(){ /* hors-ligne ou erreur réseau : on ignore, on réessaiera plus tard */ });
+}
+function afficherBanniereNouvelleVersion() {
+  if (document.getElementById('maj-banniere')) return;
+  var b = document.createElement('div');
+  b.id = 'maj-banniere';
+  b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99999;background:var(--vert);color:#062015;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;font-weight:700;box-shadow:0 -4px 16px rgba(0,0,0,0.35)';
+  b.innerHTML = '<span>&#x1F504; Nouvelle version disponible</span><button onclick="location.reload(true)" style="background:#062015;color:var(--vert);border:none;border-radius:8px;padding:10px 16px;font-weight:800;font-size:13px;cursor:pointer">Recharger</button>';
+  document.body.appendChild(b);
+}
+setTimeout(verifierNouvelleVersion, 5000);
+setInterval(verifierNouvelleVersion, 5*60*1000);
 
 async function sha256(str) {
   var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
